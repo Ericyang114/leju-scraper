@@ -584,7 +584,7 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         q1   = statistics.quantiles(vals, n=4)[0]
         q3   = statistics.quantiles(vals, n=4)[2]
         iqr  = q3 - q1
-        lo, hi   = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+        lo, hi   = q1 - 1.0 * iqr, q3 + 1.0 * iqr
         c_prices = [(p, d) for p, d in c_prices if lo <= p <= hi] or c_prices
 
     # ── 周遭調整單價：只取與社區均價 ±30% 內的筆 ─────────────────
