@@ -106,13 +106,16 @@ def main():
         log.error("請先設定 PUSH_API_KEY 環境變數！")
         sys.exit(1)
 
-    # Step 1: 本機爬取
-    log.info("=== Step 1: 開始爬取 leju.com.tw ===")
-    from scraper import scrape
-    ok = scrape()
-    if not ok:
-        log.error("爬取失敗，中止推送。")
-        sys.exit(1)
+    push_only = "--push-only" in sys.argv
+
+    if not push_only:
+        # Step 1: 本機爬取
+        log.info("=== Step 1: 開始爬取 leju.com.tw ===")
+        from scraper import scrape
+        ok = scrape()
+        if not ok:
+            log.error("爬取失敗，中止推送。")
+            sys.exit(1)
 
     # Step 2: 讀取本機資料
     log.info("=== Step 2: 讀取本機資料 ===")
