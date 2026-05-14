@@ -157,7 +157,7 @@
     <button class="tab-btn" onclick="switchTab('fees',this)">🧾 買賣雜費</button>
     <button class="tab-btn" onclick="switchTab('ping',this)">📐 坪數換算</button>
     <button class="tab-btn" onclick="switchTab('parking',this)">🚗 車位折算</button>
-    <button class="tab-btn" onclick="switchTab('estimate',this)">🏷️ 估價器</button>
+    <button class="tab-btn" onclick="switchTab('estimate',this)">🏷️ 房屋估價器</button>
   </div>
 
   <!-- ===== 實價登錄 ===== -->
@@ -750,19 +750,16 @@ async function doEstimate() {
           <div style="font-size:.7rem;color:var(--mute);margin-bottom:.35rem;">📐 ${areaNote}</div>
           ${pkCount > 0 && pkPrice > 0 ? `
           <div class="result-row">
-            <span>純房屋估價</span>
-            <span>${fmt(estHouse)} 萬</span>
+            <span>純房屋估價範圍</span>
+            <span>${fmt(houseArea * (d.q1 || avgP*0.95))} – ${fmt(houseArea * (d.q3 || avgP*1.05))} 萬</span>
           </div>
           <div class="result-row">
             <span>車位價格 × ${pkCount}</span>
             <span>${fmt(pkTotal)} 萬</span>
           </div>` : ''}
           <div class="result-row">
-            <span style="font-weight:700;">預估總價</span>
-            <span style="color:#c0392b;font-size:1.05rem;font-weight:700;">${fmt(estTotal)} 萬</span>
-          </div>
-          <div style="font-size:.7rem;color:var(--mute);text-align:right;margin-top:.1rem;">
-            合理範圍：約 ${fmt(estTotalL)} – ${fmt(estTotalH)} 萬
+            <span style="font-weight:700;">合理總價範圍</span>
+            <span style="color:#c0392b;font-size:1.05rem;font-weight:700;">${fmt(estTotalL)} – ${fmt(estTotalH)} 萬</span>
           </div>
           ${noPkWarn}
         </div>`;
