@@ -172,6 +172,28 @@ def community(sid):
     )
 
 
+@app.route("/api/communities")
+def api_communities():
+    q = request.args.get("q", "").strip()
+    if len(q) < 2:
+        return jsonify([])
+    results = db.search_communities(q, limit=8)
+    return jsonify(results)
+
+
+@app.route("/api/estimate")
+def api_estimate():
+    name = request.args.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "name required"}), 400
+    sid_str = request.args.get("sid", "")
+    sid = int(sid_str) if sid_str.isdigit() else None
+    result = db.get_community_estimate(name, sid)
+    if not result:
+        return jsonify({"tx_count": 0})
+    return jsonify(result)
+
+
 @app.route("/api/refresh", methods=["POST"])
 def api_refresh():
     if _scrape_running:

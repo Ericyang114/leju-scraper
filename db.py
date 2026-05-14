@@ -7,7 +7,7 @@ import os
 import json
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, date
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 DB_PATH      = os.environ.get("DB_PATH", "leju.db")
@@ -268,20 +268,30 @@ def get_subareas() -> list:
 
 
 def get_subarea_stats() -> list:
+    five_yr = _five_year_roc()
     with get_conn() as conn:
-        return _rows(conn, """
+        return _rows(conn, f"""
             SELECT
                 s.sid, s.name, s.post_code, s.updated_at,
-                COUNT(t.id)                                                     AS tx_count,
-                ROUND(CAST(AVG(CASE WHEN t.unit_price > 0 THEN t.unit_price END) AS NUMERIC), 2) AS avg_unit_price,
-                ROUND(CAST(MAX(CASE WHEN t.unit_price > 0 THEN t.unit_price END) AS NUMERIC), 2) AS max_unit_price,
-                ROUND(CAST(MIN(CASE WHEN t.unit_price > 0 THEN t.unit_price END) AS NUMERIC), 2) AS min_unit_price,
-                MAX(t.transaction_date)                                         AS latest_date
+                COUNT(t.id) AS tx_count,
+                ROUND(CAST(AVG(CASE WHEN t.unit_price > 0
+                               AND t.transaction_date >= {PH}
+                               AND (t.is_special_trade IS NULL OR t.is_special_trade=0)
+                               THEN t.unit_price END) AS NUMERIC), 2) AS avg_unit_price,
+                ROUND(CAST(MAX(CASE WHEN t.unit_price > 0
+                               AND t.transaction_date >= {PH}
+                               AND (t.is_special_trade IS NULL OR t.is_special_trade=0)
+                               THEN t.unit_price END) AS NUMERIC), 2) AS max_unit_price,
+                ROUND(CAST(MIN(CASE WHEN t.unit_price > 0
+                               AND t.transaction_date >= {PH}
+                               AND (t.is_special_trade IS NULL OR t.is_special_trade=0)
+                               THEN t.unit_price END) AS NUMERIC), 2) AS min_unit_price,
+                MAX(t.transaction_date) AS latest_date
             FROM subareas s
             LEFT JOIN transactions t ON s.sid = t.sid
             GROUP BY s.sid, s.name, s.post_code, s.updated_at
             ORDER BY avg_unit_price DESC NULLS LAST
-        """)
+        """, (five_yr, five_yr, five_yr))
 
 
 def _iso_to_roc_ym(iso_date: str) -> str:
@@ -293,6 +303,12 @@ def _iso_to_roc_ym(iso_date: str) -> str:
         return f"{roc_year:03d}/{month:02d}"
     except Exception:
         return iso_date
+
+
+def _five_year_roc() -> str:
+    """回傳5年前年初的民國 YYY/MM 字串（例：110/01），用於篩選近5年資料。"""
+    roc_year = date.today().year - 1911 - 5
+    return f"{roc_year:03d}/01"
 
 
 def _build_clauses(
@@ -445,11 +461,16 @@ def get_filtered_stats(
     date_from: str = "",
     date_to: str = "",
 ) -> dict:
-    """回傳目前篩選條件下的均價、最高、最低單價（用於 subarea 頁統計列）"""
+    """回傳目前篩選條件下的均價、最高、最低單價（用於 subarea 頁統計列）。
+    未指定日期範圍時，預設只計算近5年資料（不含特殊交易）。"""
     clauses, params = _build_clauses(
         [f"sid={PH}"], [sid],
         age_filter, type_filter, special_filter, date_from, date_to,
     )
+    # 若使用者未選擇起始日期，自動套用5年下限
+    if not date_from:
+        clauses.append(f"transaction_date >= {PH}")
+        params.append(_five_year_roc())
     where = " AND ".join(clauses)
     with get_conn() as conn:
         return _row(conn, f"""
@@ -459,6 +480,58 @@ def get_filtered_stats(
                 ROUND(CAST(MIN(CASE WHEN unit_price > 0 THEN unit_price END) AS NUMERIC), 1) AS min_unit_price
             FROM transactions WHERE {where}
         """, params) or {}
+
+
+def search_communities(query: str, limit: int = 8) -> list:
+    """搜尋社區名稱，回傳含近5年均價統計（用於估價器自動完成）。"""
+    q = f"%{query}%"
+    five_yr = _five_year_roc()
+    with get_conn() as conn:
+        return _rows(conn, f"""
+            SELECT
+                t.community AS name,
+                t.sid,
+                s.name AS subarea_name,
+                COUNT(*) AS tx_count,
+                ROUND(CAST(AVG(CASE WHEN t.unit_price > 0
+                               AND t.transaction_date >= {PH}
+                               AND (t.is_special_trade IS NULL OR t.is_special_trade=0)
+                               THEN t.unit_price END) AS NUMERIC), 1) AS avg_unit_price
+            FROM transactions t
+            JOIN subareas s ON s.sid = t.sid
+            WHERE t.community LIKE {PH}
+              AND t.community IS NOT NULL
+              AND t.community != ''
+            GROUP BY t.community, t.sid, s.name
+            ORDER BY tx_count DESC
+            LIMIT {PH}
+        """, (five_yr, q, limit))
+
+
+def get_community_estimate(name: str, sid: int = None) -> dict | None:
+    """估價器：取得社區近5年成交統計（排除特殊交易）。"""
+    five_yr = _five_year_roc()
+    clauses = [
+        f"community={PH}",
+        "(is_special_trade IS NULL OR is_special_trade=0)",
+        f"transaction_date >= {PH}",
+    ]
+    params = [name, five_yr]
+    if sid:
+        clauses.append(f"sid={PH}")
+        params.append(sid)
+    where = " AND ".join(clauses)
+    with get_conn() as conn:
+        return _row(conn, f"""
+            SELECT
+                community,
+                COUNT(*) AS tx_count,
+                ROUND(CAST(AVG(CASE WHEN unit_price > 0 THEN unit_price END) AS NUMERIC), 1) AS avg_unit_price,
+                ROUND(CAST(MAX(CASE WHEN unit_price > 0 THEN unit_price END) AS NUMERIC), 1) AS max_unit_price,
+                ROUND(CAST(MIN(CASE WHEN unit_price > 0 THEN unit_price END) AS NUMERIC), 1) AS min_unit_price,
+                MAX(transaction_date) AS latest_date
+            FROM transactions WHERE {where}
+        """, params)
 
 
 def get_subarea_by_sid(sid: int) -> dict | None:

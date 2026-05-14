@@ -77,6 +77,11 @@
     .sa-meta{font-size:.68rem;color:var(--mute);margin-top:.5rem;padding-top:.45rem;border-top:1px solid #f0f2f5;display:flex;justify-content:space-between;}
     .badge-cnt{background:#eef2ff;color:var(--navy2);font-size:.62rem;font-weight:600;border-radius:12px;padding:2px 7px;}
 
+    /* ── Estimator suggestions ── */
+    .est-suggestion { padding:.48rem .85rem; cursor:pointer; font-size:.82rem; border-bottom:1px solid #f0f2f5; }
+    .est-suggestion:hover { background:#f6fdf9; }
+    .est-suggestion:last-child { border-bottom:none; }
+
     /* ── LINE Modal ── */
     .qr-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center;}
     .qr-backdrop.show{display:flex;}
@@ -152,6 +157,7 @@
     <button class="tab-btn" onclick="switchTab('fees',this)">🧾 買賣雜費</button>
     <button class="tab-btn" onclick="switchTab('ping',this)">📐 坪數換算</button>
     <button class="tab-btn" onclick="switchTab('parking',this)">🚗 車位折算</button>
+    <button class="tab-btn" onclick="switchTab('estimate',this)">🏷️ 估價器</button>
   </div>
 
   <!-- ===== 實價登錄 ===== -->
@@ -360,6 +366,40 @@
     </div>
   </div>
 
+  <!-- ===== 估價器 ===== -->
+  <div class="panel calc-panel" id="panel-estimate">
+    <div class="calc-card">
+      <h2>🏷️ 房屋估價器</h2>
+      <div class="info-box mb-3">根據近5年實價登錄成交資料（排除特殊交易）估算合理行情，僅供參考。</div>
+
+      <!-- 社區自動完成 -->
+      <div class="mb-3" style="position:relative;">
+        <label class="form-label-sm">社區名稱 / 建案名稱</label>
+        <input type="text" id="est_community" class="form-control form-control-sm"
+               placeholder="輸入社區或建案名稱…" autocomplete="off"
+               oninput="fetchCommunities(this.value)"
+               onkeydown="if(event.key==='Enter')doEstimate()">
+        <div id="est_suggestions"
+             style="position:absolute;z-index:1000;width:100%;background:#fff;
+                    border:1px solid #dee2e6;border-radius:0 0 8px 8px;
+                    display:none;box-shadow:0 4px 12px rgba(0,0,0,.12);
+                    max-height:220px;overflow-y:auto;"></div>
+      </div>
+      <input type="hidden" id="est_sid" value="">
+
+      <div class="mb-3">
+        <label class="form-label-sm">坪數（坪）
+          <span style="color:var(--mute);font-size:.68rem;">（選填，填入後估算總價範圍）</span>
+        </label>
+        <input type="number" id="est_area" class="form-control form-control-sm"
+               placeholder="例：30" min="1" max="500">
+      </div>
+
+      <button class="btn-calc" onclick="doEstimate()">開始估價</button>
+      <div class="result-box" id="est_result"></div>
+    </div>
+  </div>
+
 </div><!-- end tool-section -->
 
 <!-- Footer -->
@@ -561,6 +601,119 @@ function calcParking() {
 // ── Helpers ──
 function fmt(n) { return isNaN(n) ? '—' : parseFloat(n.toFixed(2)).toLocaleString(); }
 function fmtNT(n) { return isNaN(n) ? '—' : '$' + Math.round(n).toLocaleString(); }
+
+// ── 估價器 ──
+let _estTimer = null;
+
+function fetchCommunities(q) {
+  clearTimeout(_estTimer);
+  const box = document.getElementById('est_suggestions');
+  if (q.length < 2) { box.style.display = 'none'; return; }
+  _estTimer = setTimeout(async () => {
+    try {
+      const res  = await fetch('/api/communities?q=' + encodeURIComponent(q));
+      const data = await res.json();
+      if (!data.length) { box.style.display = 'none'; return; }
+      box.innerHTML = data.map(c => {
+        const esc = c.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        const avg = c.avg_unit_price ? c.avg_unit_price + '萬/坪' : '暫無均價';
+        return `<div class="est-suggestion"
+                     onclick="selectCommunity('${esc}',${c.sid},'${c.subarea_name}')">
+                  <b>${c.name}</b>
+                  <span style="color:var(--mute);font-size:.72rem;">
+                    &nbsp;${c.subarea_name} · ${c.tx_count}筆 · ${avg}
+                  </span>
+                </div>`;
+      }).join('');
+      box.style.display = 'block';
+    } catch(e) { box.style.display = 'none'; }
+  }, 280);
+}
+
+function selectCommunity(name, sid, subarea) {
+  document.getElementById('est_community').value = name;
+  document.getElementById('est_sid').value        = sid;
+  document.getElementById('est_suggestions').style.display = 'none';
+}
+
+async function doEstimate() {
+  const name = document.getElementById('est_community').value.trim();
+  const sid  = document.getElementById('est_sid').value;
+  const area = parseFloat(document.getElementById('est_area').value) || 0;
+  const box  = document.getElementById('est_result');
+
+  if (!name) {
+    box.classList.add('show');
+    box.innerHTML = '<div style="color:#c0392b;text-align:center;">請輸入社區名稱</div>';
+    return;
+  }
+  box.classList.add('show');
+  box.innerHTML = '<div style="color:var(--mute);text-align:center;">查詢中…</div>';
+
+  try {
+    const url = '/api/estimate?name=' + encodeURIComponent(name) + (sid ? '&sid=' + sid : '');
+    const res  = await fetch(url);
+    const d    = await res.json();
+
+    if (!d || !d.tx_count || d.tx_count === 0) {
+      box.innerHTML = `<div style="color:var(--mute);text-align:center;padding:.3rem;">
+        查無「${name}」的近5年成交記錄，請嘗試其他關鍵字
+      </div>`;
+      return;
+    }
+
+    const avgP = parseFloat(d.avg_unit_price) || 0;
+    const lo   = (avgP * 0.95).toFixed(1);
+    const hi   = (avgP * 1.05).toFixed(1);
+
+    let totalHtml = '';
+    if (area > 0 && avgP > 0) {
+      const est  = (avgP * area).toFixed(0);
+      const estL = (avgP * 0.95 * area).toFixed(0);
+      const estH = (avgP * 1.05 * area).toFixed(0);
+      totalHtml = `
+        <div class="result-row" style="margin-top:.5rem;padding-top:.5rem;border-top:1px solid rgba(0,0,0,.08);">
+          <span style="font-weight:700;">預估總價（${area}坪）</span>
+          <span style="color:#c0392b;font-size:1.05rem;font-weight:700;">${fmt(parseFloat(est))} 萬</span>
+        </div>
+        <div style="font-size:.7rem;color:var(--mute);text-align:right;margin-top:.1rem;">
+          合理範圍：約 ${fmt(parseFloat(estL))} – ${fmt(parseFloat(estH))} 萬
+        </div>`;
+    }
+
+    box.innerHTML = `
+      <div style="font-size:.7rem;color:var(--mute);margin-bottom:.55rem;">
+        📊 ${d.community} · 近5年非特殊成交 <b>${d.tx_count}</b> 筆 · 最新：${d.latest_date || '—'}
+      </div>
+      <div class="result-row"><span>平均單價</span>
+        <span style="color:var(--navy);font-weight:700;">${d.avg_unit_price} <small style="font-weight:400;color:var(--mute);">萬/坪</small></span>
+      </div>
+      <div class="result-row"><span>最高單價</span>
+        <span style="color:#c0392b;">${d.max_unit_price} 萬/坪</span>
+      </div>
+      <div class="result-row"><span>最低單價</span>
+        <span style="color:#27ae60;">${d.min_unit_price} 萬/坪</span>
+      </div>
+      <div class="result-row"><span>合理區間（±5%）</span>
+        <span>${lo} – ${hi} 萬/坪</span>
+      </div>
+      ${totalHtml}
+      <div style="font-size:.67rem;color:var(--mute);margin-top:.7rem;line-height:1.55;">
+        ＊ 估價僅供參考，實際成交受樓層、裝潢、市況等因素影響<br>
+        ＊ 如需精準估價請直接聯繫老楊
+      </div>`;
+  } catch(e) {
+    box.innerHTML = '<div style="color:#c0392b;text-align:center;">查詢失敗，請稍後再試</div>';
+  }
+}
+
+// 點擊其他地方時收起建議清單
+document.addEventListener('click', e => {
+  if (!e.target.closest('#est_community') && !e.target.closest('#est_suggestions')) {
+    const s = document.getElementById('est_suggestions');
+    if (s) s.style.display = 'none';
+  }
+});
 </script>
 </body>
 </html>
