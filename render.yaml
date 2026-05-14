@@ -9,3 +9,9 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0
+      - key: DB_PATH
+        value: /data/leju.db
+    disk:
+      name: leju-data
+      mountPath: /data
+      sizeGB: 1
