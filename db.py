@@ -409,6 +409,7 @@ def get_community_stats(community: str, sid: int) -> dict | None:
                 MAX(age)              AS sample_age
             FROM transactions
             WHERE community={PH} AND sid={PH}
+            GROUP BY community, sid
         """, (community, sid))
 
 
@@ -531,6 +532,7 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
                 ROUND(CAST(MIN(CASE WHEN unit_price > 0 THEN unit_price END) AS NUMERIC), 1) AS min_unit_price,
                 MAX(transaction_date) AS latest_date
             FROM transactions WHERE {where}
+            GROUP BY community
         """, params)
 
 
