@@ -15,7 +15,7 @@ import time
 import requests
 
 # ── 設定 ─────────────────────────────────────────────────────────────────────
-RENDER_URL   = os.environ.get("RENDER_URL",   "https://yanghousetalk.onrender.com")
+RENDER_URL   = os.environ.get("RENDER_URL",   "https://leju-scraper.onrender.com")
 PUSH_API_KEY = os.environ.get("PUSH_API_KEY", "")
 LOCAL_DB     = os.path.join(os.path.dirname(__file__), "leju.db")
 BATCH_SIZE   = 300   # 每批推送筆數，避免 timeout
