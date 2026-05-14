@@ -175,6 +175,20 @@ def get_subarea_stats() -> list:
         """).fetchall()]
 
 
+def _iso_to_roc_ym(iso_date: str) -> str:
+    """
+    把西元日期字串（如 '2026-02-14'）轉成民國年/月字串（如 '115/02'），
+    用於與 DB 中 'YYY/MM' 格式的 transaction_date 做字串比大小。
+    """
+    try:
+        parts = iso_date.split("-")
+        roc_year = int(parts[0]) - 1911
+        month    = int(parts[1])
+        return f"{roc_year:03d}/{month:02d}"
+    except Exception:
+        return iso_date
+
+
 def _build_clauses(
     base_clauses: list,
     base_params: list,
@@ -213,13 +227,13 @@ def _build_clauses(
         clauses.append("is_special_trade=1")
     # "all" → no filter
 
-    # date range
+    # date range — transaction_date is stored as ROC 'YYY/MM', convert ISO input accordingly
     if date_from:
         clauses.append("transaction_date >= ?")
-        params.append(date_from)
+        params.append(_iso_to_roc_ym(date_from))
     if date_to:
         clauses.append("transaction_date <= ?")
-        params.append(date_to)
+        params.append(_iso_to_roc_ym(date_to))
 
     return clauses, params
 
