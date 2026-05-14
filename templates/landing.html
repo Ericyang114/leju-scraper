@@ -727,11 +727,11 @@ async function doEstimate() {
       }
       houseArea = Math.max(houseArea, 1); // 防呆
 
-      const pkTotal   = pkPrice * pkCount;                     // 車位總價
-      const estHouse  = houseArea * avgP;                      // 房屋估價（均價）
+      const pkTotal   = pkPrice * pkCount;
+      const estHouse  = houseArea * avgP;
       const estTotal  = estHouse + pkTotal;
-      const estTotalL = houseArea * avgP * 0.95 + pkTotal;
-      const estTotalH = houseArea * avgP * 1.05 + pkTotal;
+      const estTotalL = houseArea * (d.q1 || avgP * 0.95) + pkTotal;
+      const estTotalH = houseArea * (d.q3 || avgP * 1.05) + pkTotal;
 
       // 坪數說明文字
       const areaNote = pkCount > 0
@@ -780,11 +780,14 @@ async function doEstimate() {
       </div>
       <div class="result-row"><span>最高單價</span><span style="color:#c0392b;">${d.max_unit_price} 萬/坪</span></div>
       <div class="result-row"><span>最低單價</span><span style="color:#27ae60;">${d.min_unit_price} 萬/坪</span></div>
-      <div class="result-row"><span>合理單價區間（±5%）</span><span>${lo} – ${hi} 萬/坪</span></div>
+      <div class="result-row"><span>成交集中區間（Q1–Q3）</span>
+        <span>${d.q1 ?? lo} – ${d.q3 ?? hi} 萬/坪</span>
+      </div>
       ${parkingInfoHtml}
       ${totalHtml}
       <div style="font-size:.67rem;color:var(--mute);margin-top:.7rem;line-height:1.55;">
-        ＊ 單價已扣除車位，僅供參考，實際成交受樓層、裝潢、市況等因素影響<br>
+        ＊ 單價已扣除車位；區間為同社區實際成交 Q1–Q3 集中帶<br>
+        ＊ 僅供參考，實際成交受樓層、裝潢、市況等因素影響<br>
         ＊ 如需精準估價請直接聯繫老楊
       </div>`;
   } catch(e) {

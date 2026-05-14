@@ -587,12 +587,19 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         lo, hi   = q1 - 1.5 * iqr, q3 + 1.5 * iqr
         c_prices = [(p, d) for p, d in c_prices if lo <= p <= hi] or c_prices
 
-    # ── 周遭調整單價 ───────────────────────────────────────────────
-    n_prices = [(p, r["transaction_date"])
-                for r in n_rows if (p := _adj_price(r)) is not None]
+    # ── 周遭調整單價：只取與社區均價 ±30% 內的筆 ─────────────────
+    all_n_prices = [(p, r["transaction_date"])
+                    for r in n_rows if (p := _adj_price(r)) is not None]
 
-    # ── 指數衰減加權平均 ────────────────────────────────────────────
-    LAMBDA_C, LAMBDA_N, BASE_N = 0.06, 0.08, 0.25
+    if c_prices and all_n_prices:
+        ref  = statistics.median([p for p, _ in c_prices])
+        n_lo, n_hi = ref * 0.70, ref * 1.30
+        n_prices = [(p, d) for p, d in all_n_prices if n_lo <= p <= n_hi]
+    else:
+        n_prices = all_n_prices
+
+    # ── 指數衰減加權平均（BASE_N 降至 0.10）──────────────────────
+    LAMBDA_C, LAMBDA_N, BASE_N = 0.06, 0.08, 0.10
     wsum = wt = 0.0
     for price, d in c_prices:
         w = math.exp(-LAMBDA_C * _months_ago(d))
@@ -613,8 +620,18 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         if pp > 0 and pa > 0:
             p_prices.append(pp); p_areas.append(pa)
 
-    filtered_vals = [p for p, _ in c_prices]
+    filtered_vals = sorted(p for p, _ in c_prices)
     latest = (c_rows or n_rows)[0]["transaction_date"]
+
+    # ── Q1、Q3（顯示真實成交集中區間）────────────────────────────
+    if len(filtered_vals) >= 4:
+        q1_disp = statistics.quantiles(filtered_vals, n=4)[0]
+        q3_disp = statistics.quantiles(filtered_vals, n=4)[2]
+    elif filtered_vals:
+        q1_disp = min(filtered_vals)
+        q3_disp = max(filtered_vals)
+    else:
+        q1_disp = q3_disp = None
 
     return {
         "community":         (c_rows[0] if c_rows else {}).get("community", name),
@@ -624,6 +641,8 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         "avg_unit_price":    round(avg_p, 1),
         "max_unit_price":    round(max(filtered_vals), 1) if filtered_vals else None,
         "min_unit_price":    round(min(filtered_vals), 1) if filtered_vals else None,
+        "q1":                round(q1_disp, 1) if q1_disp is not None else None,
+        "q3":                round(q3_disp, 1) if q3_disp is not None else None,
         "latest_date":       latest,
         "avg_parking_price": round(sum(p_prices)/len(p_prices), 0) if p_prices else None,
         "avg_parking_area":  round(sum(p_areas) /len(p_areas),  1) if p_areas  else None,
