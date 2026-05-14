@@ -561,7 +561,7 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         n_cl = [f"sid={PH}", f"community!={PH}", "community IS NOT NULL",
                 "(is_special_trade IS NULL OR is_special_trade=0)",
                 f"transaction_date>={PH}", "total_price>0", "total_area>0"]
-        n_p  = [sid, name, two_yr]
+        n_p  = [sid, name, three_yr]
 
     with get_conn() as conn:
         c_rows = _rows(conn, f"""
@@ -618,8 +618,15 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         n_rows  = [r for r in n_rows
                    if (a := _parse_age(r)) is not None and med_age - 7 <= a <= med_age + 7]
 
-    n_prices = [(p, r["transaction_date"])
-                for r in n_rows if (p := _adj_price(r)) is not None]
+    all_n_prices = [(p, r["transaction_date"])
+                    for r in n_rows if (p := _adj_price(r)) is not None]
+
+    if c_prices and all_n_prices:
+        ref  = statistics.median([p for p, _ in c_prices])
+        n_lo, n_hi = ref * 0.70, ref * 1.30
+        n_prices = [(p, d) for p, d in all_n_prices if n_lo <= p <= n_hi]
+    else:
+        n_prices = all_n_prices
 
     # ── 指數衰減加權平均（BASE_N 降至 0.10）──────────────────────
     LAMBDA_C, LAMBDA_N, BASE_N = 0.06, 0.08, 0.10
@@ -646,13 +653,15 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
     filtered_vals = sorted(p for p, _ in c_prices)
     latest = (c_rows or n_rows)[0]["transaction_date"]
 
-    # ── Q1、Q3（顯示真實成交集中區間）────────────────────────────
-    if len(filtered_vals) >= 4:
-        q1_disp = statistics.quantiles(filtered_vals, n=4)[0]
-        q3_disp = statistics.quantiles(filtered_vals, n=4)[2]
-    elif filtered_vals:
-        q1_disp = min(filtered_vals)
-        q3_disp = max(filtered_vals)
+    # ── Q1、Q3（顯示近2年成交集中區間）────────────────────────────
+    two_yr_vals = sorted(p for p, d in c_prices if _months_ago(d) <= 24)
+    vals_for_range = two_yr_vals if len(two_yr_vals) >= 2 else filtered_vals
+    if len(vals_for_range) >= 4:
+        q1_disp = statistics.quantiles(vals_for_range, n=4)[0]
+        q3_disp = statistics.quantiles(vals_for_range, n=4)[2]
+    elif vals_for_range:
+        q1_disp = min(vals_for_range)
+        q3_disp = max(vals_for_range)
     else:
         q1_disp = q3_disp = None
 
