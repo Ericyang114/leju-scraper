@@ -317,6 +317,12 @@ def _three_year_roc() -> str:
     return f"{roc_year:03d}/01"
 
 
+def _two_year_roc() -> str:
+    """回傳2年前年初的民國 YYY/MM 字串（例：113/01），用於周遭近2年篩選。"""
+    roc_year = date.today().year - 1911 - 2
+    return f"{roc_year:03d}/01"
+
+
 def _build_clauses(
     base_clauses: list,
     base_params: list,
@@ -524,6 +530,7 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
     import math, statistics
 
     three_yr = _three_year_roc()
+    two_yr   = _two_year_roc()
     today    = date.today()
 
     def _months_ago(tx_date: str) -> float:
@@ -554,7 +561,7 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         n_cl = [f"sid={PH}", f"community!={PH}", "community IS NOT NULL",
                 "(is_special_trade IS NULL OR is_special_trade=0)",
                 f"transaction_date>={PH}", "total_price>0", "total_area>0"]
-        n_p  = [sid, name, three_yr]
+        n_p  = [sid, name, two_yr]
 
     with get_conn() as conn:
         c_rows = _rows(conn, f"""
@@ -611,15 +618,8 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         n_rows  = [r for r in n_rows
                    if (a := _parse_age(r)) is not None and med_age - 7 <= a <= med_age + 7]
 
-    all_n_prices = [(p, r["transaction_date"])
-                    for r in n_rows if (p := _adj_price(r)) is not None]
-
-    if c_prices and all_n_prices:
-        ref  = statistics.median([p for p, _ in c_prices])
-        n_lo, n_hi = ref * 0.70, ref * 1.30
-        n_prices = [(p, d) for p, d in all_n_prices if n_lo <= p <= n_hi]
-    else:
-        n_prices = all_n_prices
+    n_prices = [(p, r["transaction_date"])
+                for r in n_rows if (p := _adj_price(r)) is not None]
 
     # ── 指數衰減加權平均（BASE_N 降至 0.10）──────────────────────
     LAMBDA_C, LAMBDA_N, BASE_N = 0.06, 0.08, 0.10
