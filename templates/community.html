@@ -198,34 +198,13 @@
       <a href="{{ cp(special='all') }}"     class="filter-btn {{ 'active' if special_filter == 'all' }}">包含特殊</a>
       <a href="{{ cp(special='only') }}"    class="filter-btn {{ 'active' if special_filter == 'only' }}">僅特殊</a>
 
-      <span class="filter-label ms-3">日期範圍</span>
-      <form method="get" class="d-flex align-items-center gap-1 flex-wrap" id="dateForm">
-        <input type="hidden" name="name"      value="{{ community_name }}">
-        <input type="hidden" name="special"   value="{{ special_filter }}">
-        <input type="hidden" name="page"      value="1">
-        <input type="hidden" name="date_from" id="hDateFrom" value="{{ date_from }}">
-        <input type="hidden" name="date_to"   id="hDateTo"   value="{{ date_to }}">
-        <select id="rocFromY" class="form-select form-select-sm" style="width:105px;" onchange="rocChanged()">
-          <option value="">起始年份</option>
-          {% for y in range(109, 121) %}<option value="{{ y }}">民國 {{ y }} 年</option>{% endfor %}
-        </select>
-        <select id="rocFromM" class="form-select form-select-sm" style="width:80px;" onchange="rocChanged()">
-          <option value="">全年</option>
-          {% for m in range(1, 13) %}<option value="{{ m }}">{{ m }} 月</option>{% endfor %}
-        </select>
-        <span style="color:#aaa; font-size:.8rem;">–</span>
-        <select id="rocToY" class="form-select form-select-sm" style="width:105px;" onchange="rocChanged()">
-          <option value="">結束年份</option>
-          {% for y in range(109, 121) %}<option value="{{ y }}">民國 {{ y }} 年</option>{% endfor %}
-        </select>
-        <select id="rocToM" class="form-select form-select-sm" style="width:80px;" onchange="rocChanged()">
-          <option value="">全年</option>
-          {% for m in range(1, 13) %}<option value="{{ m }}">{{ m }} 月</option>{% endfor %}
-        </select>
-        {% if date_from or date_to %}
-        <a href="{{ cp(df='', dt='') }}" class="filter-btn" style="border-color:#dc3545; color:#dc3545;">✕ 清除</a>
-        {% endif %}
-      </form>
+      <span class="filter-label ms-3">期間</span>
+      <a href="{{ cp(df='', dt='') }}" class="filter-btn period-btn {{ 'active' if not date_from and not date_to }}" data-period="">全部</a>
+      <span class="filter-btn period-btn" onclick="setPeriod(3,'M')"  data-period="3M">近3個月</span>
+      <span class="filter-btn period-btn" onclick="setPeriod(6,'M')"  data-period="6M">近6個月</span>
+      <span class="filter-btn period-btn" onclick="setPeriod(1,'Y')"  data-period="1Y">近1年</span>
+      <span class="filter-btn period-btn" onclick="setPeriod(2,'Y')"  data-period="2Y">近2年</span>
+      <span class="filter-btn period-btn" onclick="setPeriod(3,'Y')"  data-period="3Y">近3年</span>
     </div>
   </div>
 
@@ -322,46 +301,35 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-(function () {
-  function gregToRoc(dateStr) {
-    if (!dateStr) return { y: '', m: '' };
-    const p = dateStr.split('-');
-    return { y: String(parseInt(p[0]) - 1911), m: String(parseInt(p[1])) };
-  }
-  const f = gregToRoc('{{ date_from }}');
-  const t = gregToRoc('{{ date_to }}');
-  if (f.y) document.getElementById('rocFromY').value = f.y;
-  if (f.m) document.getElementById('rocFromM').value = f.m;
-  if (t.y) document.getElementById('rocToY').value   = t.y;
-  if (t.m) document.getElementById('rocToM').value   = t.m;
-})();
-
-function rocChanged() {
-  const fromY = document.getElementById('rocFromY').value;
-  const fromM = document.getElementById('rocFromM').value;
-  const toY   = document.getElementById('rocToY').value;
-  const toM   = document.getElementById('rocToM').value;
-
-  if (fromY) {
-    const gy = parseInt(fromY) + 1911;
-    const gm = fromM ? String(fromM).padStart(2, '0') : '01';
-    document.getElementById('hDateFrom').value = `${gy}-${gm}-01`;
-  } else {
-    document.getElementById('hDateFrom').value = '';
-  }
-
-  if (toY) {
-    const gy  = parseInt(toY) + 1911;
-    const gm  = toM || '12';
-    const last = new Date(gy, parseInt(gm), 0).getDate();
-    document.getElementById('hDateTo').value =
-      `${gy}-${String(gm).padStart(2,'0')}-${String(last).padStart(2,'0')}`;
-  } else {
-    document.getElementById('hDateTo').value = '';
-  }
-
-  document.getElementById('dateForm').submit();
+function setPeriod(n, unit) {
+  const today = new Date();
+  const from  = new Date(today);
+  if (unit === 'M') from.setMonth(from.getMonth() - n);
+  else              from.setFullYear(from.getFullYear() - n);
+  const fmt = d => d.toISOString().slice(0, 10);
+  const p = new URLSearchParams(window.location.search);
+  p.set('date_from', fmt(from));
+  p.set('date_to',   fmt(today));
+  p.set('page', '1');
+  window.location.href = '?' + p.toString();
 }
+
+(function () {
+  const df = '{{ date_from }}';
+  if (!df) return;
+  const today    = new Date();
+  const fromDate = new Date(df);
+  const defs = { '3M':[3,'M'], '6M':[6,'M'], '1Y':[1,'Y'], '2Y':[2,'Y'], '3Y':[3,'Y'] };
+  document.querySelectorAll('.period-btn[data-period]').forEach(btn => {
+    const key = btn.dataset.period;
+    if (!key || !defs[key]) return;
+    const [n, unit] = defs[key];
+    const exp = new Date(today);
+    if (unit === 'M') exp.setMonth(exp.getMonth() - n);
+    else              exp.setFullYear(exp.getFullYear() - n);
+    if (Math.abs(fromDate - exp) < 5 * 86400000) btn.classList.add('active');
+  });
+})();
 </script>
 </body>
 </html>
