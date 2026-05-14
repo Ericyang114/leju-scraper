@@ -99,8 +99,12 @@ def subarea(sid):
         age_filter=age_filter, type_filter=type_filter,
         special_filter=special_filter, date_from=date_from, date_to=date_to,
     )
-    total_pages = max(1, math.ceil(total / per_page))
-    bldg_types  = db.get_building_types(sid)
+    total_pages    = max(1, math.ceil(total / per_page))
+    bldg_types     = db.get_building_types(sid)
+    filtered_stats = db.get_filtered_stats(
+        sid, age_filter=age_filter, type_filter=type_filter,
+        special_filter=special_filter, date_from=date_from, date_to=date_to,
+    )
 
     return render_template(
         "subarea.html",
@@ -116,6 +120,7 @@ def subarea(sid):
         date_from=date_from,
         date_to=date_to,
         bldg_types=bldg_types,
+        filtered_stats=filtered_stats,
     )
 
 

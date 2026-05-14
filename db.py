@@ -437,6 +437,30 @@ def get_community_transactions(
         return total, rows
 
 
+def get_filtered_stats(
+    sid: int,
+    age_filter: str = "all",
+    type_filter: str = "all",
+    special_filter: str = "exclude",
+    date_from: str = "",
+    date_to: str = "",
+) -> dict:
+    """回傳目前篩選條件下的均價、最高、最低單價（用於 subarea 頁統計列）"""
+    clauses, params = _build_clauses(
+        [f"sid={PH}"], [sid],
+        age_filter, type_filter, special_filter, date_from, date_to,
+    )
+    where = " AND ".join(clauses)
+    with get_conn() as conn:
+        return _row(conn, f"""
+            SELECT
+                ROUND(CAST(AVG(CASE WHEN unit_price > 0 THEN unit_price END) AS NUMERIC), 1) AS avg_unit_price,
+                ROUND(CAST(MAX(CASE WHEN unit_price > 0 THEN unit_price END) AS NUMERIC), 1) AS max_unit_price,
+                ROUND(CAST(MIN(CASE WHEN unit_price > 0 THEN unit_price END) AS NUMERIC), 1) AS min_unit_price
+            FROM transactions WHERE {where}
+        """, params) or {}
+
+
 def get_subarea_by_sid(sid: int) -> dict | None:
     with get_conn() as conn:
         return _row(conn, f"SELECT * FROM subareas WHERE sid={PH}", (sid,))

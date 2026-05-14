@@ -172,28 +172,41 @@
   <div class="row g-2 mb-3">
     <div class="col-6 col-md-3">
       <div class="stat-card">
-        <div class="label">本頁筆數</div>
-        <div class="value mid">{{ transactions|length }}</div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="label">符合筆數</div>
-        <div class="value mid">{{ total }}</div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="label">最新成交日</div>
-        <div class="value mid" style="font-size:1rem;">
-          {{ transactions[0].transaction_date if transactions else '—' }}
+        <div class="label">篩選均價</div>
+        <div class="value up">
+          {% if filtered_stats.avg_unit_price %}
+            {{ "%.1f"|format(filtered_stats.avg_unit_price) }}
+            <small style="font-size:.72rem; color:#aaa;"> 萬/坪</small>
+          {% else %}—{% endif %}
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="stat-card">
-        <div class="label">頁次</div>
-        <div class="value mid" style="font-size:1rem;">{{ page }} / {{ total_pages }}</div>
+        <div class="label">最高單價</div>
+        <div class="value up">
+          {% if filtered_stats.max_unit_price %}
+            {{ "%.1f"|format(filtered_stats.max_unit_price) }}
+            <small style="font-size:.72rem; color:#aaa;"> 萬/坪</small>
+          {% else %}—{% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="label">最低單價</div>
+        <div class="value down">
+          {% if filtered_stats.min_unit_price %}
+            {{ "%.1f"|format(filtered_stats.min_unit_price) }}
+            <small style="font-size:.72rem; color:#aaa;"> 萬/坪</small>
+          {% else %}—{% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="label">符合筆數</div>
+        <div class="value mid">{{ total }} <small style="font-size:.72rem; color:#aaa;">筆</small></div>
       </div>
     </div>
   </div>
