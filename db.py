@@ -4,7 +4,6 @@ import os
 from contextlib import contextmanager
 from datetime import datetime
 
-# 本機開發用 leju.db，部署到 Render 時讀取 DB_PATH 環境變數（指向持久磁碟）
 DB_PATH = os.environ.get("DB_PATH", "leju.db")
 
 
