@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>楊肇寧 · 老楊房快說 · 永慶不動產</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy:#1a2e5a; --navy2:#243b73; --gold:#b8922a; --gold2:#d4a843;
+      --bg:#f4f6fb; --text:#1e293b; --mute:#64748b; --green:#1a7a56;
+    }
+    *{box-sizing:border-box;}
+    body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);margin:0;}
+
+    /* ── Top bar ── */
+    .topbar{background:var(--navy);padding:.5rem 1.2rem;display:flex;align-items:center;justify-content:space-between;}
+    .topbar .brand{color:#fff;font-size:.8rem;font-weight:700;letter-spacing:.06em;}
+    .topbar .last-update{color:rgba(255,255,255,.4);font-size:.68rem;}
+
+    /* ── Agent card ── */
+    .agent-card{background:linear-gradient(145deg,var(--navy) 0%,var(--navy2) 100%);color:#fff;padding:1.5rem 1.4rem 1.3rem;position:relative;overflow:hidden;}
+    .agent-card::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.04);}
+    .agent-avatar{width:68px;height:68px;border-radius:50%;border:3px solid var(--gold2);object-fit:cover;flex-shrink:0;}
+    .agent-avatar-fb{width:68px;height:68px;border-radius:50%;border:3px solid var(--gold2);display:none;align-items:center;justify-content:center;font-size:1.8rem;color:var(--gold2);flex-shrink:0;background:rgba(255,255,255,.1);}
+    .agent-name{font-size:1.3rem;font-weight:700;}
+    .agent-sub{font-size:.75rem;color:var(--gold2);font-weight:600;letter-spacing:.04em;margin-top:.1rem;}
+    .agent-company{font-size:.73rem;color:rgba(255,255,255,.6);margin-top:.12rem;}
+    .agent-intro{font-size:.77rem;color:rgba(255,255,255,.7);line-height:1.65;margin:.75rem 0 .9rem;position:relative;z-index:1;}
+    .btn-call{background:var(--gold);color:#fff;border:none;padding:.4rem .95rem;border-radius:24px;font-size:.78rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;}
+    .btn-call:hover{background:var(--gold2);color:#fff;}
+    .btn-line{background:#06c755;color:#fff;border:none;padding:.4rem .95rem;border-radius:24px;font-size:.78rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;}
+    .btn-line:hover{background:#05b34b;color:#fff;}
+    .divider-bar{height:4px;background:linear-gradient(90deg,var(--gold) 0%,var(--gold2) 50%,transparent 100%);}
+
+    /* ── Tab system ── */
+    .tool-section{background:#fff;}
+    .tool-header{background:var(--navy);color:var(--gold2);font-size:.82rem;font-weight:700;letter-spacing:.08em;padding:.55rem 1.1rem;display:flex;align-items:center;gap:.4rem;}
+    .tab-bar{display:flex;overflow-x:auto;background:#1e2d52;scrollbar-width:none;}
+    .tab-bar::-webkit-scrollbar{display:none;}
+    .tab-btn{flex-shrink:0;padding:.5rem .85rem;font-size:.75rem;font-weight:600;color:rgba(255,255,255,.5);cursor:pointer;border:none;background:transparent;border-bottom:3px solid transparent;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:.3rem;}
+    .tab-btn:hover{color:rgba(255,255,255,.9);}
+    .tab-btn.active{color:#fff;border-bottom-color:var(--gold2);background:rgba(255,255,255,.06);}
+    .tab-btn.t-price.active{border-bottom-color:#5de8a8;color:#5de8a8;}
+    .panel{display:none;} .panel.active{display:block;}
+
+    /* ── Calculator common ── */
+    .calc-panel{padding:1.1rem 1rem;background:var(--bg);}
+    .calc-card{background:#fff;border-radius:12px;padding:1.2rem;box-shadow:0 1px 6px rgba(0,0,0,.07);margin-bottom:.8rem;}
+    .calc-card h2{font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:1rem;}
+    .form-label-sm{font-size:.78rem;color:var(--mute);margin-bottom:.3rem;display:block;}
+    .form-control-sm{font-size:.82rem;padding:.38rem .6rem;}
+    .toggle-group{display:flex;border-radius:8px;overflow:hidden;border:1.5px solid #dee2e6;}
+    .toggle-btn{flex:1;padding:.38rem .5rem;font-size:.76rem;font-weight:600;border:none;background:#fff;color:#6b7280;cursor:pointer;transition:all .15s;text-align:center;}
+    .toggle-btn.active{background:var(--green);color:#fff;}
+    .btn-calc{width:100%;padding:.55rem;font-size:.88rem;font-weight:700;color:#fff;border:none;border-radius:8px;cursor:pointer;background:linear-gradient(135deg,var(--navy),var(--navy2));margin-top:.8rem;}
+    .btn-calc:hover{opacity:.9;}
+    .result-box{background:linear-gradient(135deg,#f0f4ff,#e8efff);border-radius:10px;padding:1rem;margin-top:.8rem;display:none;}
+    .result-box.show{display:block;}
+    .result-main{font-size:1.6rem;font-weight:700;color:var(--navy);}
+    .result-unit{font-size:.75rem;color:var(--mute);font-weight:400;}
+    .result-detail{font-size:.75rem;color:var(--mute);margin-top:.4rem;line-height:1.7;}
+    .result-row{display:flex;justify-content:space-between;font-size:.78rem;padding:.2rem 0;border-bottom:1px solid rgba(0,0,0,.06);}
+    .result-row:last-child{border:none;font-weight:700;color:var(--navy);font-size:.85rem;margin-top:.3rem;}
+    .info-box{background:#fff8e1;border-left:3px solid var(--gold2);padding:.5rem .8rem;border-radius:4px;font-size:.72rem;color:#7a5f10;line-height:1.6;margin-top:.6rem;}
+
+    /* ── Price panel (實價登錄) ── */
+    .price-panel{padding:1rem;background:var(--bg);}
+    .section-label{font-size:.7rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.08em;border-left:3px solid var(--gold);padding-left:.5rem;margin-bottom:.85rem;}
+    .sa-card{background:#fff;border-radius:10px;box-shadow:0 1px 5px rgba(0,0,0,.07);padding:.85rem 1rem;text-decoration:none;color:var(--text);display:block;transition:transform .15s,box-shadow .15s;border-top:3px solid transparent;}
+    .sa-card:hover{transform:translateY(-2px);box-shadow:0 5px 16px rgba(26,46,90,.11);border-top-color:var(--navy);color:var(--text);}
+    .sa-name{font-size:.88rem;font-weight:700;color:var(--navy);margin-bottom:.5rem;}
+    .sa-price{font-size:1.2rem;font-weight:700;color:var(--navy);}
+    .sa-pu{font-size:.62rem;color:var(--mute);font-weight:400;}
+    .sa-range{font-size:.7rem;color:var(--mute);margin-top:.2rem;}
+    .sa-meta{font-size:.68rem;color:var(--mute);margin-top:.5rem;padding-top:.45rem;border-top:1px solid #f0f2f5;display:flex;justify-content:space-between;}
+    .badge-cnt{background:#eef2ff;color:var(--navy2);font-size:.62rem;font-weight:600;border-radius:12px;padding:2px 7px;}
+
+    /* ── LINE Modal ── */
+    .qr-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center;}
+    .qr-backdrop.show{display:flex;}
+    .qr-box{background:#fff;border-radius:16px;padding:1.6rem 1.4rem 1.2rem;text-align:center;max-width:270px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.35);}
+    .qr-box img{width:190px;height:190px;border-radius:8px;}
+    .qr-close{display:block;width:100%;padding:.42rem;background:#06c755;color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;margin-top:.8rem;}
+
+    /* ── Footer ── */
+    footer{background:var(--navy);color:rgba(255,255,255,.38);text-align:center;font-size:.68rem;padding:1.1rem;}
+  </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <span class="brand">永慶不動產</span>
+  <span class="last-update">{% if last_scrape %}資料更新：{{ last_scrape.scraped_at[:10] }}{% endif %}</span>
+</div>
+
+<!-- Agent card -->
+<div class="agent-card">
+  <div class="d-flex gap-3 align-items-center mb-2" style="position:relative;z-index:1;">
+    <img src="/static/images/avatar.png" alt="楊肇寧" class="agent-avatar"
+         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+    <div class="agent-avatar-fb">楊</div>
+    <div>
+      <div class="d-flex align-items-baseline gap-2 flex-wrap">
+        <div class="agent-name">楊肇寧</div>
+        <div style="font-size:.78rem;color:var(--gold2);font-weight:600;">老楊房快說</div>
+      </div>
+      <div class="agent-sub">永慶不動產 · 專業經紀人</div>
+    </div>
+  </div>
+  <p class="agent-intro">深耕桃園區房產市場多年，提供最即時、透明的成交實價登錄資訊，<br>協助您精準掌握市場行情，做出最佳置產決策。</p>
+  <div class="d-flex gap-2 flex-wrap" style="position:relative;z-index:1;">
+    <a href="tel:0935195944" class="btn-call">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+      0935-195-944
+    </a>
+    <button class="btn-line" onclick="document.getElementById('lineModal').classList.add('show')">
+      <svg width="13" height="13" viewBox="0 0 48 48" fill="currentColor"><path d="M24 4C12.95 4 4 11.86 4 21.5c0 5.9 3.3 11.1 8.4 14.5-.37 1.36-1.34 4.94-1.54 5.7-.24.96.35 1.95 1.31 1.95.25 0 .5-.07.72-.21L19.5 40c1.47.37 3.01.57 4.5.57C34.05 40.57 44 32.71 44 21.5 44 11.86 35.05 4 24 4z"/></svg>
+      加 LINE 好友
+    </button>
+  </div>
+</div>
+<div class="divider-bar"></div>
+
+<!-- LINE QR Modal -->
+<div class="qr-backdrop" id="lineModal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="qr-box">
+    <div style="font-size:.95rem;font-weight:700;color:var(--navy);margin-bottom:.25rem;">加 LINE 好友</div>
+    <div style="font-size:.72rem;color:#94a3b8;margin-bottom:.7rem;">使用 LINE 掃描 QR Code</div>
+    <img src="/static/images/line_qr.png" alt="LINE QR Code"
+         onerror="this.style.opacity='.3';this.alt='請將 line_qr.png 放入 static/images/'">
+    <div style="font-size:.68rem;color:#94a3b8;margin-top:.5rem;">楊肇寧 · 老楊房快說</div>
+    <button class="qr-close" onclick="document.getElementById('lineModal').classList.remove('show')">關閉</button>
+  </div>
+</div>
+
+<!-- Tool section -->
+<div class="tool-section">
+  <div class="tool-header">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>
+    老楊全能房產實用工具
+  </div>
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <button class="tab-btn t-price active" onclick="switchTab('price',this)">📋 實價登錄</button>
+    <button class="tab-btn" onclick="switchTab('land',this)">🏛️ 房地合一</button>
+    <button class="tab-btn" onclick="switchTab('afford',this)">🏠 購屋能力</button>
+    <button class="tab-btn" onclick="switchTab('mortgage',this)">🏦 房貸試算</button>
+    <button class="tab-btn" onclick="switchTab('fees',this)">🧾 買賣雜費</button>
+    <button class="tab-btn" onclick="switchTab('ping',this)">📐 坪數換算</button>
+    <button class="tab-btn" onclick="switchTab('parking',this)">🚗 車位折算</button>
+  </div>
+
+  <!-- ===== 實價登錄 ===== -->
+  <div class="panel price-panel active" id="panel-price">
+    <div class="section-label mb-3">桃園區 · 生活圈行情</div>
+    {% if stats %}
+    <div class="d-flex gap-3 flex-wrap mb-3" style="font-size:.74rem;color:var(--mute);">
+      {% set total_tx = stats|map(attribute='tx_count')|sum %}
+      <span><b style="color:var(--navy);">{{ stats|length }}</b> 個生活圈</span>
+      <span><b style="color:var(--navy);">{{ "{:,}".format(total_tx) }}</b> 筆成交記錄</span>
+      <span>{% set ns=namespace(l='') %}{% for s in stats %}{% if s.latest_date and s.latest_date>ns.l %}{% set ns.l=s.latest_date %}{% endif %}{% endfor %}最新 <b style="color:var(--navy);">{{ ns.l or '—' }}</b></span>
+    </div>
+    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2">
+      {% for s in stats %}
+      <div class="col">
+        <a class="sa-card h-100" href="/subarea/{{ s.sid }}">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="sa-name">{{ s.name }}</div>
+            <span class="badge-cnt">{{ s.tx_count }}筆</span>
+          </div>
+          {% if s.avg_unit_price %}
+          <div class="sa-price">{{ "%.1f"|format(s.avg_unit_price) }}<span class="sa-pu"> 萬/坪</span></div>
+          <div class="sa-range"><span style="color:#c0392b;">▲ {{ s.max_unit_price }}</span> &nbsp;<span style="color:#27ae60;">▼ {{ s.min_unit_price }}</span></div>
+          {% else %}<div class="sa-price" style="font-size:.85rem;color:var(--mute);">暫無資料</div>{% endif %}
+          <div class="sa-meta"><span>最新：{{ s.latest_date or '—' }}</span><span style="color:var(--navy);font-weight:600;">查看 ›</span></div>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<div class="text-center py-4 text-muted">資料載入中…</div>{% endif %}
+  </div>
+
+  <!-- ===== 房地合一稅 ===== -->
+  <div class="panel calc-panel" id="panel-land">
+    <div class="calc-card">
+      <h2>🏛️ 房地合一稅試算</h2>
+      <div class="mb-3">
+        <label class="form-label-sm">賣出總價（萬）</label>
+        <input type="number" id="l_sell" class="form-control form-control-sm" placeholder="例：2000">
+      </div>
+      <div class="mb-3">
+        <label class="form-label-sm">取得成本（萬）</label>
+        <input type="number" id="l_cost" class="form-control form-control-sm" placeholder="例：1500">
+      </div>
+      <div class="mb-3">
+        <label class="form-label-sm">土地漲價總數額（萬）<span style="color:var(--mute);font-size:.68rem;"> 參考土增稅單</span></label>
+        <input type="number" id="l_land" class="form-control form-control-sm" placeholder="0">
+      </div>
+      <div class="mb-3">
+        <label class="form-label-sm">成本費用扣除</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="l_cost_default" onclick="toggleCostMethod('default')">預設 3%（上限30萬）</button>
+          <button class="toggle-btn" id="l_cost_list" onclick="toggleCostMethod('list')">列舉憑證</button>
+        </div>
+        <input type="number" id="l_cost_input" class="form-control form-control-sm mt-2" placeholder="列舉費用（萬）" style="display:none;">
+      </div>
+      <div class="mb-3">
+        <label class="form-label-sm">持有期間</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="l_h0" onclick="setHold(0)">2年內</button>
+          <button class="toggle-btn" id="l_h1" onclick="setHold(1)">2–5年</button>
+          <button class="toggle-btn" id="l_h2" onclick="setHold(2)">5–10年</button>
+          <button class="toggle-btn" id="l_h3" onclick="setHold(3)">10年+</button>
+        </div>
+      </div>
+      <div class="mb-2">
+        <label style="display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--mute);cursor:pointer;">
+          <input type="checkbox" id="l_selfuse"> 自用滿 6 年（400萬免稅 + 10% 稅率）
+        </label>
+      </div>
+      <button class="btn-calc" onclick="calcLand()">開始試算</button>
+      <div class="result-box" id="l_result"></div>
+      <div class="info-box">一般用地稅率：分3級按土地漲價總數額累進課徵 20%、30%、40%。自用住宅優惠稅率 10%，400萬以內免稅。</div>
+    </div>
+  </div>
+
+  <!-- ===== 購屋能力 ===== -->
+  <div class="panel calc-panel" id="panel-afford">
+    <div class="calc-card">
+      <h2>🏠 購屋能力試算</h2>
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <label class="form-label-sm">月收入（萬）</label>
+          <input type="number" id="a_income" class="form-control form-control-sm" placeholder="例：6">
+        </div>
+        <div class="col-6">
+          <label class="form-label-sm">現有自備款（萬）</label>
+          <input type="number" id="a_down" class="form-control form-control-sm" placeholder="例：200">
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label-sm">負債比上限（月收佔比）</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="a_r0" onclick="setDTI(0)">保守 33%</button>
+          <button class="toggle-btn" id="a_r1" onclick="setDTI(1)">積極 50%</button>
+          <button class="toggle-btn" id="a_r2" onclick="setDTI(2)">緊繃 60%</button>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label-sm">貸款年限</label>
+        <div class="toggle-group">
+          <button class="toggle-btn" id="a_y0" onclick="setAfYear(0)">20 年</button>
+          <button class="toggle-btn active" id="a_y1" onclick="setAfYear(1)">30 年</button>
+        </div>
+      </div>
+      <div style="font-size:.68rem;color:var(--mute);text-align:right;margin-top:-.5rem;margin-bottom:.5rem;">* 試算利率以 2.3% 估計</div>
+      <button class="btn-calc" onclick="calcAfford()">計算購屋能力</button>
+      <div class="result-box" id="a_result"></div>
+    </div>
+  </div>
+
+  <!-- ===== 房貸試算 ===== -->
+  <div class="panel calc-panel" id="panel-mortgage">
+    <div class="calc-card">
+      <h2>🏦 房貸試算</h2>
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <label class="form-label-sm">貸款金額（萬）</label>
+          <input type="number" id="m_loan" class="form-control form-control-sm" placeholder="例：1000">
+        </div>
+        <div class="col-6">
+          <label class="form-label-sm">年利率（%）</label>
+          <input type="number" id="m_rate" class="form-control form-control-sm" value="2.2" step="0.1">
+        </div>
+      </div>
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <label class="form-label-sm">貸款期限（年）</label>
+          <input type="number" id="m_years" class="form-control form-control-sm" value="30">
+        </div>
+        <div class="col-6">
+          <label class="form-label-sm">寬限期（年）</label>
+          <input type="number" id="m_grace" class="form-control form-control-sm" value="0">
+        </div>
+      </div>
+      <button class="btn-calc" onclick="calcMortgage()">房貸試算</button>
+      <div class="result-box" id="m_result"></div>
+    </div>
+  </div>
+
+  <!-- ===== 買賣雜費 ===== -->
+  <div class="panel calc-panel" id="panel-fees">
+    <div class="calc-card">
+      <h2>🧾 買賣雜費試算</h2>
+      <div class="mb-3">
+        <label class="form-label-sm">成交總價（萬）</label>
+        <input type="number" id="f_price" class="form-control form-control-sm" placeholder="例：2000">
+      </div>
+      <div class="mb-3">
+        <label class="form-label-sm">您的身分</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="f_b" onclick="setRole('buyer')">買方 (Buyer)</button>
+          <button class="toggle-btn" id="f_s" onclick="setRole('seller')">賣方 (Seller)</button>
+        </div>
+      </div>
+      <button class="btn-calc" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);" onclick="calcFees()">試算雜費</button>
+      <div class="result-box" id="f_result" style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);"></div>
+      <div class="info-box">土地增值稅：一般用地稅率分3級（20%、30%、40%），自用住宅優惠稅率 10%。塗銷費：土地、建物每增加一筆加收 1/4。<br>* 公部門費用依實際稅單金額為主　* 代書收費依代書事務所為主</div>
+    </div>
+  </div>
+
+  <!-- ===== 坪數換算 ===== -->
+  <div class="panel calc-panel" id="panel-ping">
+    <div class="calc-card">
+      <h2>📐 坪數換算</h2>
+      <div class="info-box mb-3" style="background:#fff8e1;">換算公式：1 坪 = 3.30579 平方公尺　／　1 平方公尺 = 0.3025 坪</div>
+      <div class="mb-3">
+        <label class="form-label-sm">坪數（坪）</label>
+        <input type="number" id="p_ping" class="form-control form-control-sm" placeholder="0" oninput="pingToM2()">
+      </div>
+      <div style="text-align:center;font-size:1.4rem;color:var(--mute);margin:.3rem 0;">⇄</div>
+      <div class="mb-1">
+        <label class="form-label-sm">平方公尺（m²）</label>
+        <input type="number" id="p_m2" class="form-control form-control-sm" placeholder="0" oninput="m2ToPing()">
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 車位折算 ===== -->
+  <div class="panel calc-panel" id="panel-parking">
+    <div class="calc-card">
+      <h2>🚗 車位折算</h2>
+      <div class="info-box mb-3">實價登錄或廣告傳單常包含車位價格與坪數，此功能可計算出「扣除車位後的真實房屋單價」。</div>
+      <div class="row g-2 mb-2">
+        <div class="col-6">
+          <label class="form-label-sm">房屋總價（含車位）萬</label>
+          <input type="number" id="pk_total" class="form-control form-control-sm" placeholder="例：2500">
+        </div>
+        <div class="col-6">
+          <label class="form-label-sm">權狀總坪數（含車位）坪</label>
+          <input type="number" id="pk_tping" class="form-control form-control-sm" placeholder="例：50">
+        </div>
+      </div>
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <label class="form-label-sm">車位價格（萬）</label>
+          <input type="number" id="pk_pPrice" class="form-control form-control-sm" placeholder="例：200">
+        </div>
+        <div class="col-6">
+          <label class="form-label-sm">車位坪數（坪）</label>
+          <input type="number" id="pk_pPing" class="form-control form-control-sm" placeholder="例：10">
+        </div>
+      </div>
+      <button class="btn-calc" style="background:linear-gradient(135deg,#dc2626,#b91c1c);" onclick="calcParking()">計算單價</button>
+      <div class="result-box" id="pk_result" style="background:linear-gradient(135deg,#fff1f2,#ffe4e6);"></div>
+    </div>
+  </div>
+
+</div><!-- end tool-section -->
+
+<!-- Footer -->
+<footer>
+  <div>資料來源：內政部實價登錄 · 由樂居平台整理</div>
+  <div class="mt-1">本頁資訊僅供參考，實際成交以官方登錄為準</div>
+  <div class="mt-2"><a href="/dashboard" style="color:rgba(255,255,255,.2);font-size:.62rem;text-decoration:none;">管理後台</a></div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ── Tab switching ──
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+// ── 房地合一稅 ──
+let holdIdx = 0, costMethod = 'default';
+const holdRates = [0.45, 0.35, 0.20, 0.15];
+const holdLabels = ['2年內 45%', '2–5年 35%', '5–10年 20%', '10年以上 15%'];
+
+function setHold(i) {
+  holdIdx = i;
+  [0,1,2,3].forEach(j => document.getElementById('l_h'+j).classList.toggle('active', j===i));
+}
+function toggleCostMethod(m) {
+  costMethod = m;
+  document.getElementById('l_cost_default').classList.toggle('active', m==='default');
+  document.getElementById('l_cost_list').classList.toggle('active', m==='list');
+  document.getElementById('l_cost_input').style.display = m==='list' ? 'block' : 'none';
+}
+function calcLand() {
+  const sell = parseFloat(document.getElementById('l_sell').value) || 0;
+  const cost = parseFloat(document.getElementById('l_cost').value) || 0;
+  const land = parseFloat(document.getElementById('l_land').value) || 0;
+  const selfUse = document.getElementById('l_selfuse').checked;
+  let deduct = costMethod === 'default' ? Math.min(sell * 0.03, 30) : (parseFloat(document.getElementById('l_cost_input').value) || 0);
+  const taxable = Math.max(0, sell - cost - land - deduct);
+  let tax = 0, rateLabel = '';
+  if (selfUse) {
+    tax = Math.max(0, taxable - 400) * 0.10;
+    rateLabel = '自住優惠稅率 10%，400萬以內免稅';
+  } else {
+    tax = taxable * holdRates[holdIdx];
+    rateLabel = holdLabels[holdIdx];
+  }
+  const box = document.getElementById('l_result');
+  box.classList.add('show');
+  box.innerHTML = `
+    <div style="font-size:.7rem;color:var(--mute);margin-bottom:.4rem;">試算結果</div>
+    <div class="result-row"><span>賣出總價</span><span>${fmt(sell)} 萬</span></div>
+    <div class="result-row"><span>取得成本</span><span>${fmt(cost)} 萬</span></div>
+    <div class="result-row"><span>土地漲價數額</span><span>${fmt(land)} 萬</span></div>
+    <div class="result-row"><span>費用扣除</span><span>${fmt(deduct)} 萬</span></div>
+    <div class="result-row"><span>應稅所得</span><span>${fmt(taxable)} 萬</span></div>
+    <div class="result-row"><span>適用稅率</span><span>${rateLabel}</span></div>
+    <div class="result-row"><span>預估稅額</span><span style="color:#c0392b;">${fmt(tax)} 萬</span></div>
+  `;
+}
+
+// ── 購屋能力 ──
+let dtiIdx = 0, afYearIdx = 1;
+const dtiRates = [0.33, 0.50, 0.60];
+const afYears  = [20, 30];
+function setDTI(i) { dtiIdx=i; [0,1,2].forEach(j=>document.getElementById('a_r'+j).classList.toggle('active',j===i)); }
+function setAfYear(i) { afYearIdx=i; [0,1].forEach(j=>document.getElementById('a_y'+j).classList.toggle('active',j===i)); }
+function calcAfford() {
+  const income = parseFloat(document.getElementById('a_income').value) || 0;
+  const down   = parseFloat(document.getElementById('a_down').value) || 0;
+  const r = 0.023 / 12;
+  const n = afYears[afYearIdx] * 12;
+  const monthPay = income * dtiRates[dtiIdx];
+  const loanable = monthPay * (1 - Math.pow(1+r, -n)) / r;
+  const total = loanable + down;
+  const box = document.getElementById('a_result');
+  box.classList.add('show');
+  box.innerHTML = `
+    <div style="font-size:.7rem;color:var(--mute);margin-bottom:.4rem;">試算結果（利率 2.3%）</div>
+    <div class="result-row"><span>月收入</span><span>${fmt(income)} 萬</span></div>
+    <div class="result-row"><span>月可支付房貸</span><span>${fmt(monthPay)} 萬</span></div>
+    <div class="result-row"><span>可貸金額</span><span>${fmt(loanable)} 萬</span></div>
+    <div class="result-row"><span>自備款</span><span>${fmt(down)} 萬</span></div>
+    <div class="result-row"><span>可購屋總價（估）</span><span style="color:#1a7a56;">${fmt(total)} 萬</span></div>
+  `;
+}
+
+// ── 房貸試算 ──
+function calcMortgage() {
+  const P = (parseFloat(document.getElementById('m_loan').value) || 0) * 10000;
+  const annRate = parseFloat(document.getElementById('m_rate').value) || 2.2;
+  const years   = parseInt(document.getElementById('m_years').value) || 30;
+  const grace   = parseInt(document.getElementById('m_grace').value) || 0;
+  const r = annRate / 100 / 12;
+  const n = years * 12;
+  const g = grace * 12;
+  const graceMonthly = P * r;
+  const repayN = n - g;
+  let monthly = 0;
+  if (repayN > 0 && r > 0) {
+    monthly = P * r * Math.pow(1+r, repayN) / (Math.pow(1+r, repayN) - 1);
+  }
+  const totalInterest = graceMonthly * g + monthly * repayN - P;
+  const box = document.getElementById('m_result');
+  box.classList.add('show');
+  box.innerHTML = `
+    <div style="font-size:.7rem;color:var(--mute);margin-bottom:.4rem;">試算結果</div>
+    ${g > 0 ? `<div class="result-row"><span>寬限期月付（只付息）</span><span>${fmtNT(graceMonthly)}</span></div>` : ''}
+    <div class="result-row"><span>還款期每月本利</span><span>${fmtNT(monthly)}</span></div>
+    <div class="result-row"><span>總利息</span><span>${fmtNT(totalInterest)}</span></div>
+    <div class="result-row"><span>總還款金額</span><span style="color:#c0392b;">${fmtNT(P + totalInterest)}</span></div>
+  `;
+}
+
+// ── 買賣雜費 ──
+let feeRole = 'buyer';
+function setRole(r) {
+  feeRole = r;
+  document.getElementById('f_b').classList.toggle('active', r==='buyer');
+  document.getElementById('f_s').classList.toggle('active', r==='seller');
+}
+function calcFees() {
+  const price = parseFloat(document.getElementById('f_price').value) || 0;
+  let rows = [], total = 0;
+  if (feeRole === 'seller') {
+    const agency = price * 10000 * 0.04;
+    const pen    = 1000;
+    const escrow = price * 10000 * 0.0003;
+    const reg    = 2000;
+    const cancel = 2000;
+    rows = [
+      ['仲介服務費 (4%)', agency],
+      ['潤筆費', pen],
+      ['履保費用 (萬分之3)', escrow],
+      ['實價登錄代辦費', reg],
+      ['抵押權塗銷代書費', cancel],
+    ];
+    total = agency + pen + escrow + reg + cancel;
+    const box = document.getElementById('f_result');
+    box.classList.add('show');
+    box.innerHTML = `<div style="font-size:.75rem;font-weight:700;color:#7c3aed;margin-bottom:.5rem;">賣方預估雜項費用</div>`
+      + rows.map(([k,v])=>`<div class="result-row"><span>${k}</span><span>$${Math.round(v).toLocaleString()}</span></div>`).join('')
+      + `<div class="result-row"><span>費用總計</span><span>$${Math.round(total).toLocaleString()}</span></div>`;
+  } else {
+    const agency = price * 10000 * 0.02;
+    const pen    = 1000;
+    const escrow = price * 10000 * 0.0003;
+    const notary = 20000;
+    const stamp  = price * 10000 * 0.001;
+    rows = [
+      ['仲介服務費 (2%)', agency],
+      ['潤筆費', pen],
+      ['履保費用 (萬分之3)', escrow],
+      ['代書費（估）', notary],
+      ['印花稅 (0.1%)', stamp],
+    ];
+    total = agency + pen + escrow + notary + stamp;
+    const box = document.getElementById('f_result');
+    box.classList.add('show');
+    box.innerHTML = `<div style="font-size:.75rem;font-weight:700;color:#7c3aed;margin-bottom:.5rem;">買方預估雜項費用</div>`
+      + rows.map(([k,v])=>`<div class="result-row"><span>${k}</span><span>$${Math.round(v).toLocaleString()}</span></div>`).join('')
+      + `<div class="result-row"><span>費用總計</span><span>$${Math.round(total).toLocaleString()}</span></div>`;
+  }
+}
+
+// ── 坪數換算 ──
+function pingToM2() {
+  const v = parseFloat(document.getElementById('p_ping').value);
+  document.getElementById('p_m2').value = isNaN(v) ? '' : (v * 3.30579).toFixed(4);
+}
+function m2ToPing() {
+  const v = parseFloat(document.getElementById('p_m2').value);
+  document.getElementById('p_ping').value = isNaN(v) ? '' : (v * 0.3025).toFixed(4);
+}
+
+// ── 車位折算 ──
+function calcParking() {
+  const total  = parseFloat(document.getElementById('pk_total').value) || 0;
+  const tPing  = parseFloat(document.getElementById('pk_tping').value) || 0;
+  const pPrice = parseFloat(document.getElementById('pk_pPrice').value) || 0;
+  const pPing  = parseFloat(document.getElementById('pk_pPing').value) || 0;
+  const housePing  = tPing - pPing;
+  const housePrice = total - pPrice;
+  const unitPrice  = housePing > 0 ? housePrice / housePing : 0;
+  const rawUnit    = tPing > 0 ? total / tPing : 0;
+  const box = document.getElementById('pk_result');
+  box.classList.add('show');
+  box.innerHTML = `
+    <div style="font-size:.7rem;color:var(--mute);margin-bottom:.4rem;">試算結果</div>
+    <div class="result-row"><span>含車位單價</span><span>${fmt(rawUnit)} 萬/坪</span></div>
+    <div class="result-row"><span>純房屋坪數</span><span>${fmt(housePing)} 坪</span></div>
+    <div class="result-row"><span>純房屋售價</span><span>${fmt(housePrice)} 萬</span></div>
+    <div class="result-row"><span>真實房屋單價</span><span style="color:#c0392b;">${fmt(unitPrice)} 萬/坪</span></div>
+  `;
+}
+
+// ── Helpers ──
+function fmt(n) { return isNaN(n) ? '—' : parseFloat(n.toFixed(2)).toLocaleString(); }
+function fmtNT(n) { return isNaN(n) ? '—' : '$' + Math.round(n).toLocaleString(); }
+</script>
+</body>
+</html>

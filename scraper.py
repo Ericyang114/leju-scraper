@@ -112,18 +112,22 @@ def _parse_transaction(sid: int, item: dict) -> dict:
         "parking_area":     item.get("parking_area_ping"),
         "floor_ratio":      ratio_str,
         "building_type":    item.get("building_type"),
+        "is_special_trade": int(item.get("is_special_trade") or 0),
         "_raw":             item,
     }
 
 
-def _query_month(
+_PER_PAGE = 20   # API hard limit without sessionToken
+
+
+def _query_once(
     s: cf_requests.Session,
     sid: int,
     name: str,
     date_start: str,
     date_end: str,
 ) -> list[dict]:
-    """查詢單一生活圈在指定日期範圍內的第一頁資料（不翻頁）。"""
+    """單次 API 呼叫，最多回傳 _PER_PAGE 筆。"""
     params = {
         "city_code":             CITY_CODE,
         "city_name":             CITY_NAME,
@@ -149,7 +153,7 @@ def _query_month(
         "sort_by":               1,
         "sort_method":           2,
         "page":                  1,
-        "per_page":              20,
+        "per_page":              _PER_PAGE,
     }
     try:
         r = s.get(f"{API_BASE}/search/transactions", params=params, headers=API_HEADERS, timeout=20)
@@ -160,6 +164,56 @@ def _query_month(
     except Exception as exc:
         log.warning("  查詢 sid=%s %s~%s 失敗: %s", sid, date_start, date_end, exc)
         return []
+
+
+def _fetch_range(
+    s: cf_requests.Session,
+    sid: int,
+    name: str,
+    date_start: str,
+    date_end: str,
+    depth: int = 0,
+) -> list[dict]:
+    """抓取日期範圍內的所有資料。
+    若回傳剛好 _PER_PAGE 筆（可能被截斷），自動對半拆分再遞迴查詢，
+    直到每段結果 < _PER_PAGE 筆或已縮小至單日為止。
+    """
+    records = _query_once(s, sid, name, date_start, date_end)
+
+    # 結果不足上限，或已達最大遞迴深度（防護），直接回傳
+    if len(records) < _PER_PAGE or depth >= 6:
+        if len(records) == _PER_PAGE and depth >= 6:
+            log.warning("  sid=%s %s~%s 達遞迴上限，可能仍有資料未抓", sid, date_start, date_end)
+        return records
+
+    # 結果剛好等於上限：對半切
+    start_d = datetime.strptime(date_start, "%Y-%m-%d").date()
+    end_d   = datetime.strptime(date_end,   "%Y-%m-%d").date()
+
+    if start_d >= end_d:
+        # 已縮小到單日，無法再切
+        log.warning("  sid=%s %s 單日超過 %d 筆，部分資料可能遺漏", sid, date_start, _PER_PAGE)
+        return records
+
+    mid_d  = start_d + (end_d - start_d) // 2
+    next_d = mid_d + timedelta(days=1)
+
+    log.debug("  sid=%s 區間 %s~%s 達上限，拆分查詢 (depth=%d)",
+              sid, date_start, date_end, depth)
+
+    time.sleep(0.25)
+    left  = _fetch_range(s, sid, name, date_start,             mid_d.strftime("%Y-%m-%d"), depth + 1)
+    time.sleep(0.25)
+    right = _fetch_range(s, sid, name, next_d.strftime("%Y-%m-%d"), date_end,              depth + 1)
+
+    # 合併並去重（同 id 只保留一筆）
+    seen: set = set()
+    merged: list = []
+    for r in left + right:
+        if r["id"] not in seen:
+            seen.add(r["id"])
+            merged.append(r)
+    return merged
 
 
 def _month_ranges(from_str: str, to_str: str) -> list[tuple[str, str]]:
@@ -173,7 +227,6 @@ def _month_ranges(from_str: str, to_str: str) -> list[tuple[str, str]]:
         if month_end > end:
             month_end = end
         result.append((cur.strftime("%Y-%m-%d"), month_end.strftime("%Y-%m-%d")))
-        # 跳到下個月
         if cur.month == 12:
             cur = cur.replace(year=cur.year + 1, month=1)
         else:
@@ -187,13 +240,15 @@ def fetch_subarea_by_months(
     name: str,
     date_start: str,
 ) -> list[dict]:
-    """以月份遍歷方式抓取生活圈的所有交易資料（不需要 sessionToken）。"""
+    """以月份遍歷方式抓取生活圈所有交易資料。
+    若某月超過 20 筆（API 上限），自動對半拆分確保不漏抓。
+    """
     today  = date.today().strftime("%Y-%m-%d")
     ranges = _month_ranges(date_start, today)
     all_records: list = []
 
-    for i, (d_start, d_end) in enumerate(ranges):
-        records = _query_month(s, sid, name, d_start, d_end)
+    for d_start, d_end in ranges:
+        records = _fetch_range(s, sid, name, d_start, d_end)
         if records:
             all_records.extend(records)
             log.info("  %-16s %s ~ %s  → %d 筆", name, d_start, d_end, len(records))

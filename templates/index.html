@@ -90,10 +90,18 @@
         共 {{ stats|length }} 個生活圈
       {% endif %}
     </span>
-    <button id="refreshBtn" class="btn btn-sm btn-success px-3"
-            onclick="triggerRefresh()" {% if running %}disabled{% endif %}>
-      {{ '更新中…' if running else '立即更新' }}
-    </button>
+    <div class="d-flex gap-2">
+      <button id="refreshBtn" class="btn btn-sm btn-success px-3"
+              onclick="triggerRefresh(false)" {% if running %}disabled{% endif %}>
+        {{ '更新中…' if running else '立即更新' }}
+      </button>
+      <button id="fullRefreshBtn" class="btn btn-sm btn-outline-warning px-3"
+              onclick="triggerRefresh(true)"
+              title="從 2020 年起全量重新抓取，補回過去漏抓的資料（約 20–40 分鐘）"
+              {% if running %}disabled{% endif %}>
+        全量重抓
+      </button>
+    </div>
   </div>
 </div>
 
@@ -150,23 +158,30 @@
 <script>
 let pollTimer = null;
 
-async function triggerRefresh() {
-  const btn  = document.getElementById('refreshBtn');
-  const stat = document.getElementById('statusText');
-  btn.disabled = true;
-  btn.textContent = '更新中…';
-  stat.innerHTML = '<span class="dot-running"></span>正在更新資料…';
+async function triggerRefresh(full = false) {
+  if (full && !confirm('全量重抓會從 2020 年起重新爬取所有資料，補回漏抓的記錄，約需 20–40 分鐘。確定嗎？')) return;
+
+  const btn      = document.getElementById('refreshBtn');
+  const fullBtn  = document.getElementById('fullRefreshBtn');
+  const stat     = document.getElementById('statusText');
+  btn.disabled     = true;
+  fullBtn.disabled = true;
+  btn.textContent  = '更新中…';
+  stat.innerHTML   = '<span class="dot-running"></span>' + (full ? '全量重新抓取中…' : '正在更新資料…');
 
   try {
-    const r = await fetch('/api/refresh', { method: 'POST' });
-    const d = await r.json();
+    const url = full ? '/api/refresh?full=1' : '/api/refresh';
+    const r   = await fetch(url, { method: 'POST' });
+    const d   = await r.json();
     if (d.status === 'already_running') {
       stat.textContent = '爬蟲已在執行，請稍後重新整理';
+      btn.disabled = fullBtn.disabled = false;
+      btn.textContent = '立即更新';
     } else {
       pollStatus();
     }
   } catch(e) {
-    btn.disabled = false;
+    btn.disabled = fullBtn.disabled = false;
     btn.textContent = '立即更新';
     stat.textContent = '發生錯誤，請重試';
   }

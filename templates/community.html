@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ subarea.name }} · 實價登錄 - 桃園區</title>
+  <title>{{ community_name }} · 社區行情 - 桃園區</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { background: #f0f2f5; }
@@ -37,7 +37,6 @@
       border-radius: 10px;
       padding: .85rem 1.1rem;
       box-shadow: 0 1px 5px rgba(0,0,0,.07);
-      margin-bottom: 1rem;
     }
     .filter-label {
       font-size: .72rem;
@@ -62,11 +61,26 @@
       transition: all .15s;
     }
     .filter-btn:hover { border-color: #1a7a56; color: #1a7a56; }
-    .filter-btn.active {
-      background: #1a7a56;
-      border-color: #1a7a56;
-      color: #fff;
+    .filter-btn.active { background: #1a7a56; border-color: #1a7a56; color: #fff; }
+
+    /* Yearly trend */
+    .trend-bar-wrap {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      box-shadow: 0 1px 5px rgba(0,0,0,.07);
     }
+    .trend-row {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: .45rem;
+    }
+    .trend-year { font-size: .75rem; color: #666; width: 2.8rem; text-align: right; flex-shrink: 0; }
+    .trend-bar-bg { flex: 1; background: #e9ecef; border-radius: 4px; height: 18px; overflow: hidden; }
+    .trend-bar-fill { height: 100%; background: #1a7a56; border-radius: 4px; min-width: 4px; transition: width .4s; }
+    .trend-val { font-size: .75rem; color: #333; width: 5rem; text-align: right; flex-shrink: 0; }
+    .trend-cnt { font-size: .7rem; color: #aaa; width: 3rem; flex-shrink: 0; }
 
     .tx-table thead th {
       background: #f8f9fa;
@@ -76,18 +90,8 @@
       border-bottom: 2px solid #dee2e6;
       white-space: nowrap;
     }
-    .tx-table tbody td {
-      font-size: .82rem;
-      vertical-align: middle;
-    }
+    .tx-table tbody td { font-size: .82rem; vertical-align: middle; }
     .tx-table tbody tr:hover { background: #f6fdf9; }
-
-    .community-link {
-      font-weight: 600;
-      color: #1a7a56;
-      text-decoration: none;
-    }
-    .community-link:hover { text-decoration: underline; }
 
     .price-unit { font-size: .68rem; color: #aaa; }
     .no-data { color: #ccc; }
@@ -107,60 +111,96 @@
     <nav aria-label="breadcrumb">
       <ol class="breadcrumb mb-2" style="font-size:.8rem;">
         <li class="breadcrumb-item"><a href="/">回首頁</a></li>
-        <li class="breadcrumb-item active">{{ subarea.name }}</li>
+        <li class="breadcrumb-item"><a href="/subarea/{{ subarea.sid }}">{{ subarea.name }}</a></li>
+        <li class="breadcrumb-item active">{{ community_name }}</li>
       </ol>
     </nav>
-    <h1>{{ subarea.name }} · 實價登錄</h1>
+    <h1>{{ community_name }} · 社區行情</h1>
     <p class="mb-0" style="font-size:.82rem; opacity:.8;">
-      桃園區（郵遞區號 {{ subarea.post_code }}）　符合條件 {{ total }} 筆
+      {{ subarea.name }}　共 {{ total }} 筆成交記錄
+      {% if stats.earliest_date and stats.latest_date %}
+        　{{ stats.earliest_date }} ~ {{ stats.latest_date }}
+      {% endif %}
     </p>
   </div>
 </div>
 
 <div class="container py-3">
 
+  <!-- Key stats -->
+  <div class="row g-2 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="label">平均單價</div>
+        <div class="value mid">
+          {{ "%.1f"|format(stats.avg_unit_price) if stats.avg_unit_price else '—' }}
+          <small style="font-size:.75rem; color:#aaa;"> 萬/坪</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="label">最高單價</div>
+        <div class="value up">
+          {{ "%.1f"|format(stats.max_unit_price) if stats.max_unit_price else '—' }}
+          <small style="font-size:.75rem; color:#aaa;"> 萬/坪</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="label">最低單價</div>
+        <div class="value down">
+          {{ "%.1f"|format(stats.min_unit_price) if stats.min_unit_price else '—' }}
+          <small style="font-size:.75rem; color:#aaa;"> 萬/坪</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="label">平均總價</div>
+        <div class="value mid">
+          {{ "%.0f"|format(stats.avg_total_price) if stats.avg_total_price else '—' }}
+          <small style="font-size:.75rem; color:#aaa;"> 萬</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Yearly trend -->
+  {% if yearly and yearly|length > 1 %}
+  {% set max_price = yearly | map(attribute='avg_unit_price') | select | max %}
+  <div class="trend-bar-wrap mb-3">
+    <div class="mb-2" style="font-size:.8rem; font-weight:600; color:#555;">歷年均價走勢（萬/坪）</div>
+    {% for row in yearly %}
+    {% set pct = ((row.avg_unit_price or 0) / max_price * 100) if max_price else 0 %}
+    <div class="trend-row">
+      <span class="trend-year">{{ row.year }}</span>
+      <div class="trend-bar-bg">
+        <div class="trend-bar-fill" style="width:{{ pct | round(1) }}%;"></div>
+      </div>
+      <span class="trend-val">
+        {{ "%.1f"|format(row.avg_unit_price) if row.avg_unit_price else '—' }}
+      </span>
+      <span class="trend-cnt">{{ row.tx_count }} 筆</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <!-- Filter bar -->
-  <div class="filter-card">
-    {# shared param helper #}
-    {% macro fp(age=age_filter, type=type_filter, special=special_filter, df=date_from, dt=date_to) %}age={{ age }}&type={{ type | urlencode }}&special={{ special }}&date_from={{ df }}&date_to={{ dt }}&page=1{% endmacro %}
+  <div class="filter-card mb-3">
+    {% macro cp(special=special_filter, df=date_from, dt=date_to) %}/community/{{ subarea.sid }}?name={{ community_name | urlencode }}&special={{ special }}&date_from={{ df }}&date_to={{ dt }}&page=1{% endmacro %}
 
-    <!-- Row 1: Age filter -->
-    <div class="d-flex align-items-center flex-wrap gap-1 mb-2">
-      <span class="filter-label">屋齡</span>
-      {% set age_opts = [
-        ('all',     '全部'),
-        ('presale', '預售屋'),
-        ('ready',   '成屋'),
-        ('0-5',     '0–5 年'),
-        ('5-10',    '5–10 年'),
-        ('10-20',   '10–20 年'),
-        ('20+',     '20 年以上'),
-      ] %}
-      {% for val, label in age_opts %}
-        <a href="?{{ fp(age=val) }}" class="filter-btn {{ 'active' if age_filter == val }}">{{ label }}</a>
-      {% endfor %}
-    </div>
-
-    <!-- Row 2: Building type filter -->
-    <div class="d-flex align-items-center flex-wrap gap-1 mb-2">
-      <span class="filter-label">物件類型</span>
-      <a href="?{{ fp(type='all') }}" class="filter-btn {{ 'active' if type_filter == 'all' }}">全部</a>
-      {% for bt in bldg_types %}
-        <a href="?{{ fp(type=bt) }}" class="filter-btn {{ 'active' if type_filter == bt }}">{{ bt }}</a>
-      {% endfor %}
-    </div>
-
-    <!-- Row 3: Special trade + date range -->
     <div class="d-flex align-items-center flex-wrap gap-2">
       <span class="filter-label">特殊交易</span>
-      <a href="?{{ fp(special='exclude') }}" class="filter-btn {{ 'active' if special_filter == 'exclude' }}">排除特殊</a>
-      <a href="?{{ fp(special='all') }}"     class="filter-btn {{ 'active' if special_filter == 'all' }}">包含特殊</a>
-      <a href="?{{ fp(special='only') }}"    class="filter-btn {{ 'active' if special_filter == 'only' }}">僅特殊</a>
+      <a href="{{ cp(special='exclude') }}" class="filter-btn {{ 'active' if special_filter == 'exclude' }}">排除特殊</a>
+      <a href="{{ cp(special='all') }}"     class="filter-btn {{ 'active' if special_filter == 'all' }}">包含特殊</a>
+      <a href="{{ cp(special='only') }}"    class="filter-btn {{ 'active' if special_filter == 'only' }}">僅特殊</a>
 
       <span class="filter-label ms-3">日期範圍</span>
       <form method="get" class="d-flex align-items-center gap-1 flex-wrap" id="dateForm">
-        <input type="hidden" name="age"       value="{{ age_filter }}">
-        <input type="hidden" name="type"      value="{{ type_filter }}">
+        <input type="hidden" name="name"      value="{{ community_name }}">
         <input type="hidden" name="special"   value="{{ special_filter }}">
         <input type="hidden" name="page"      value="1">
         <input type="hidden" name="date_from" id="hDateFrom" value="{{ date_from }}">
@@ -183,44 +223,13 @@
           {% for m in range(1, 13) %}<option value="{{ m }}">{{ m }} 月</option>{% endfor %}
         </select>
         {% if date_from or date_to %}
-        <a href="?{{ fp(df='', dt='') }}" class="filter-btn" style="border-color:#dc3545; color:#dc3545;">✕ 清除</a>
+        <a href="{{ cp(df='', dt='') }}" class="filter-btn" style="border-color:#dc3545; color:#dc3545;">✕ 清除</a>
         {% endif %}
       </form>
     </div>
   </div>
 
-  <!-- Summary stats -->
-  {% if transactions %}
-  <div class="row g-2 mb-3">
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="label">本頁筆數</div>
-        <div class="value mid">{{ transactions|length }}</div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="label">符合筆數</div>
-        <div class="value mid">{{ total }}</div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="label">最新成交日</div>
-        <div class="value mid" style="font-size:1rem;">
-          {{ transactions[0].transaction_date if transactions else '—' }}
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="label">頁次</div>
-        <div class="value mid" style="font-size:1rem;">{{ page }} / {{ total_pages }}</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Table -->
+  <!-- Transaction table -->
   <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
       <div class="table-responsive">
@@ -228,7 +237,6 @@
           <thead>
             <tr>
               <th>成交日</th>
-              <th>社區名稱</th>
               <th>地址</th>
               <th>樓層</th>
               <th>屋齡</th>
@@ -246,18 +254,8 @@
             {% for t in transactions %}
             <tr>
               <td class="text-nowrap">{{ t.transaction_date or '—' }}</td>
-              <td>
-                {% if t.community %}
-                  <a href="/community/{{ subarea.sid }}?name={{ t.community | urlencode }}"
-                     class="community-link">{{ t.community }}</a>
-                {% else %}
-                  <span class="no-data">—</span>
-                {% endif %}
-              </td>
               <td style="max-width:160px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
-                  title="{{ t.address or '' }}">
-                {{ t.address or '—' }}
-              </td>
+                  title="{{ t.address or '' }}">{{ t.address or '—' }}</td>
               <td class="text-nowrap">
                 {% if t.floor and t.total_floor %}
                   {{ t.floor }}/{{ t.total_floor }}F
@@ -270,11 +268,7 @@
               <td>{{ t.age if t.age is not none else '—' }}</td>
               <td>{{ t.building_type or '<span class="no-data">—</span>' | safe }}</td>
               <td class="text-end fw-semibold">
-                {% if t.total_price %}
-                  {{ "%.0f"|format(t.total_price) }}
-                {% else %}
-                  <span class="no-data">—</span>
-                {% endif %}
+                {{ "%.0f"|format(t.total_price) if t.total_price else '<span class="no-data">—</span>' | safe }}
               </td>
               <td class="text-end">
                 {% if t.unit_price %}
@@ -300,35 +294,28 @@
     </div>
   </div>
 
-  <!-- Pagination (preserve filters) -->
+  <!-- Pagination -->
   {% if total_pages > 1 %}
-  {% set pg_base = 'age=' ~ age_filter ~ '&type=' ~ (type_filter | urlencode) ~ '&special=' ~ special_filter ~ '&date_from=' ~ date_from ~ '&date_to=' ~ date_to %}
+  {% set pg_base = '/community/' ~ subarea.sid ~ '?name=' ~ (community_name | urlencode) ~ '&special=' ~ special_filter ~ '&date_from=' ~ date_from ~ '&date_to=' ~ date_to %}
   <nav class="mt-3 d-flex justify-content-center">
     <ul class="pagination pagination-sm">
       <li class="page-item {{ 'disabled' if page <= 1 }}">
-        <a class="page-link" href="?{{ pg_base }}&page={{ page - 1 }}">‹ 上一頁</a>
+        <a class="page-link" href="{{ pg_base }}&page={{ page - 1 }}">‹ 上一頁</a>
       </li>
       {% for p in range(1, total_pages + 1) %}
         {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
           <li class="page-item {{ 'active' if p == page }}">
-            <a class="page-link" href="?{{ pg_base }}&page={{ p }}">{{ p }}</a>
+            <a class="page-link" href="{{ pg_base }}&page={{ p }}">{{ p }}</a>
           </li>
         {% elif p == page - 3 or p == page + 3 %}
           <li class="page-item disabled"><span class="page-link">…</span></li>
         {% endif %}
       {% endfor %}
       <li class="page-item {{ 'disabled' if page >= total_pages }}">
-        <a class="page-link" href="?{{ pg_base }}&page={{ page + 1 }}">下一頁 ›</a>
+        <a class="page-link" href="{{ pg_base }}&page={{ page + 1 }}">下一頁 ›</a>
       </li>
     </ul>
   </nav>
-  {% endif %}
-
-  {% else %}
-  <div class="py-5 text-center text-muted">
-    <p class="fs-5">此條件下無交易記錄</p>
-    <a href="?age=all&type=all&special=exclude&date_from=&date_to=&page=1" class="btn btn-outline-success">清除篩選</a>
-  </div>
   {% endif %}
 
 </div>
@@ -336,7 +323,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 (function () {
-  // Restore selects from existing Gregorian dates on page load
   function gregToRoc(dateStr) {
     if (!dateStr) return { y: '', m: '' };
     const p = dateStr.split('-');
