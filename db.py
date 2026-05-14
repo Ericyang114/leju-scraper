@@ -559,20 +559,30 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
     with get_conn() as conn:
         c_rows = _rows(conn, f"""
             SELECT community, total_price, total_area,
-                   parking_price, parking_area, transaction_date
+                   parking_price, parking_area, transaction_date, age
             FROM transactions WHERE {" AND ".join(c_cl)}
             ORDER BY transaction_date DESC
         """, c_p)
         if sid:
             n_rows = _rows(conn, f"""
                 SELECT total_price, total_area,
-                       parking_price, parking_area, transaction_date
+                       parking_price, parking_area, transaction_date, age
                 FROM transactions WHERE {" AND ".join(n_cl)}
                 ORDER BY transaction_date DESC LIMIT 300
             """, n_p)
 
     if not c_rows and not n_rows:
         return {"community": name, "tx_count": 0}
+
+    # ── 解析屋齡輔助 ────────────────────────────────────────────────
+    def _parse_age(r):
+        a = r.get("age")
+        if not a or a == "預售":
+            return None
+        try:
+            return int(a)
+        except Exception:
+            return None
 
     # ── 同社區調整單價 + IQR 過濾 ─────────────────────────────────
     c_prices = [(p, r["transaction_date"])
@@ -587,7 +597,15 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         lo, hi   = q1 - 1.0 * iqr, q3 + 1.0 * iqr
         c_prices = [(p, d) for p, d in c_prices if lo <= p <= hi] or c_prices
 
-    # ── 周遭調整單價：只取與社區均價 ±30% 內的筆 ─────────────────
+    # ── 周遭：先依屋齡 ±7 年篩選，再依均價 ±30% 篩選 ─────────────
+    c_ages = [a for r in c_rows if (a := _parse_age(r)) is not None]
+    if c_ages and n_rows:
+        med_age  = statistics.median(c_ages)
+        age_lo   = med_age - 7
+        age_hi   = med_age + 7
+        n_rows   = [r for r in n_rows
+                    if (a := _parse_age(r)) is not None and age_lo <= a <= age_hi]
+
     all_n_prices = [(p, r["transaction_date"])
                     for r in n_rows if (p := _adj_price(r)) is not None]
 
