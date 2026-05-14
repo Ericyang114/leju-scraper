@@ -186,6 +186,28 @@ def api_status():
     return jsonify({"running": _scrape_running, "last_scrape": last})
 
 
+@app.route("/api/push-data", methods=["POST"])
+def api_push_data():
+    """本機爬蟲推送資料到雲端的接口（需 X-Api-Key 驗證）。"""
+    expected_key = os.environ.get("PUSH_API_KEY", "")
+    if not expected_key or request.headers.get("X-Api-Key", "") != expected_key:
+        return jsonify({"error": "unauthorized"}), 401
+
+    payload  = request.get_json(force=True, silent=True) or {}
+    subareas = payload.get("subareas", [])
+    txs      = payload.get("transactions", [])
+    info     = payload.get("scrape_info", {})
+
+    if subareas:
+        db.upsert_subareas(subareas)
+    if txs:
+        db.upsert_transactions(txs)
+    if info.get("status"):
+        db.log_scrape(info["status"], info.get("message", ""), info.get("records_count", len(txs)))
+
+    return jsonify({"status": "ok", "subareas": len(subareas), "transactions": len(txs)})
+
+
 @app.route("/healthz")
 def healthz():
     """Render health check endpoint."""
