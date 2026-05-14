@@ -516,87 +516,118 @@ def search_communities(query: str, limit: int = 8) -> list:
 
 
 def get_community_estimate(name: str, sid: int = None) -> dict | None:
-    """估價器：近3年成交資料，扣除車位後計算每坪單價，並以 IQR×1.5 剔除離群值。"""
-    import statistics
+    """估價器：指數時間衰減 + 同生活圈周遭補充加權估價（方法二A）。
+    同社區  : weight = e^(-0.06 × 距今月數)
+    同生活圈: weight = 0.25 × e^(-0.08 × 距今月數)
+    先 IQR 過濾同社區離群值，再合併加權平均。
+    """
+    import math, statistics
 
     three_yr = _three_year_roc()
-    clauses = [
-        f"community={PH}",
-        "(is_special_trade IS NULL OR is_special_trade=0)",
-        f"transaction_date >= {PH}",
-        "total_price > 0",
-        "total_area  > 0",
-    ]
-    params = [name, three_yr]
+    today    = date.today()
+
+    def _months_ago(tx_date: str) -> float:
+        try:
+            parts = tx_date.split("/")
+            wy    = int(parts[0]) + 1911
+            m     = int(parts[1])
+            return max(0.0, (today.year - wy) * 12 + (today.month - m))
+        except Exception:
+            return 36.0
+
+    def _adj_price(r):
+        hp = (r["total_price"] or 0) - (r["parking_price"] or 0)
+        ha = (r["total_area"]  or 0) - (r["parking_area"]  or 0)
+        return hp / ha if hp > 0 and ha > 0 else None
+
+    # ── 同社區查詢 ─────────────────────────────────────────────────
+    c_cl = [f"community={PH}",
+            "(is_special_trade IS NULL OR is_special_trade=0)",
+            f"transaction_date>={PH}", "total_price>0", "total_area>0"]
+    c_p  = [name, three_yr]
     if sid:
-        clauses.append(f"sid={PH}")
-        params.append(sid)
-    where = " AND ".join(clauses)
+        c_cl.append(f"sid={PH}"); c_p.append(sid)
+
+    # ── 同生活圈（周遭）查詢 ───────────────────────────────────────
+    n_rows: list = []
+    if sid:
+        n_cl = [f"sid={PH}", f"community!={PH}", "community IS NOT NULL",
+                "(is_special_trade IS NULL OR is_special_trade=0)",
+                f"transaction_date>={PH}", "total_price>0", "total_area>0"]
+        n_p  = [sid, name, three_yr]
 
     with get_conn() as conn:
-        rows = _rows(conn, f"""
+        c_rows = _rows(conn, f"""
             SELECT community, total_price, total_area,
                    parking_price, parking_area, transaction_date
-            FROM transactions WHERE {where}
+            FROM transactions WHERE {" AND ".join(c_cl)}
             ORDER BY transaction_date DESC
-        """, params)
+        """, c_p)
+        if sid:
+            n_rows = _rows(conn, f"""
+                SELECT total_price, total_area,
+                       parking_price, parking_area, transaction_date
+                FROM transactions WHERE {" AND ".join(n_cl)}
+                ORDER BY transaction_date DESC LIMIT 300
+            """, n_p)
 
-    if not rows:
+    if not c_rows and not n_rows:
         return {"community": name, "tx_count": 0}
 
-    # ── 每筆扣掉車位，算純房屋每坪單價 ──────────────────────────────
-    prices = []
-    for r in rows:
-        house_price = (r["total_price"] or 0) - (r["parking_price"] or 0)
-        house_area  = (r["total_area"]  or 0) - (r["parking_area"]  or 0)
-        if house_price > 0 and house_area > 0:
-            prices.append(house_price / house_area)
+    # ── 同社區調整單價 + IQR 過濾 ─────────────────────────────────
+    c_prices = [(p, r["transaction_date"])
+                for r in c_rows if (p := _adj_price(r)) is not None]
+    tx_raw = len(c_prices)
 
-    if not prices:
-        return {"community": name, "tx_count": 0}
-
-    tx_raw = len(prices)
-    prices_sorted = sorted(prices)
-
-    # ── IQR × 1.5 過濾（樣本 ≥ 5 才執行）────────────────────────────
     if tx_raw >= 5:
-        q1, q3 = (statistics.quantiles(prices_sorted, n=4)[0],
-                  statistics.quantiles(prices_sorted, n=4)[2])
-        iqr = q3 - q1
-        lo, hi = q1 - 1.5 * iqr, q3 + 1.5 * iqr
-        filtered = [p for p in prices_sorted if lo <= p <= hi]
-        if not filtered:          # 萬一全被剔完就退回原始
-            filtered = prices_sorted
-    else:
-        filtered = prices_sorted
+        vals = sorted(p for p, _ in c_prices)
+        q1   = statistics.quantiles(vals, n=4)[0]
+        q3   = statistics.quantiles(vals, n=4)[2]
+        iqr  = q3 - q1
+        lo, hi   = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+        c_prices = [(p, d) for p, d in c_prices if lo <= p <= hi] or c_prices
 
-    avg_p  = sum(filtered) / len(filtered)
-    latest = rows[0]["transaction_date"] if rows else None
+    # ── 周遭調整單價 ───────────────────────────────────────────────
+    n_prices = [(p, r["transaction_date"])
+                for r in n_rows if (p := _adj_price(r)) is not None]
 
-    # ── 車位統計（另外查，只取有車位資料的筆）────────────────────────
-    p_prices = []
-    p_areas  = []
-    for r in rows:
-        pp = r["parking_price"] or 0
-        pa = r["parking_area"]  or 0
+    # ── 指數衰減加權平均 ────────────────────────────────────────────
+    LAMBDA_C, LAMBDA_N, BASE_N = 0.06, 0.08, 0.25
+    wsum = wt = 0.0
+    for price, d in c_prices:
+        w = math.exp(-LAMBDA_C * _months_ago(d))
+        wsum += price * w; wt += w
+    for price, d in n_prices:
+        w = BASE_N * math.exp(-LAMBDA_N * _months_ago(d))
+        wsum += price * w; wt += w
+
+    if wt == 0:
+        return {"community": name, "tx_count": 0}
+
+    avg_p = wsum / wt
+
+    # ── 車位統計 ───────────────────────────────────────────────────
+    p_prices, p_areas = [], []
+    for r in c_rows:
+        pp, pa = r["parking_price"] or 0, r["parking_area"] or 0
         if pp > 0 and pa > 0:
-            p_prices.append(pp)
-            p_areas.append(pa)
+            p_prices.append(pp); p_areas.append(pa)
 
-    avg_parking_price = round(sum(p_prices) / len(p_prices), 0) if p_prices else None
-    avg_parking_area  = round(sum(p_areas)  / len(p_areas),  1) if p_areas  else None
+    filtered_vals = [p for p, _ in c_prices]
+    latest = (c_rows or n_rows)[0]["transaction_date"]
 
     return {
-        "community":        rows[0]["community"],
-        "tx_count":         len(filtered),
-        "tx_raw":           tx_raw,
-        "avg_unit_price":   round(avg_p, 1),
-        "max_unit_price":   round(max(filtered), 1),
-        "min_unit_price":   round(min(filtered), 1),
-        "latest_date":      latest,
-        "avg_parking_price": avg_parking_price,   # 萬
-        "avg_parking_area":  avg_parking_area,    # 坪/個
-        "parking_sample":   len(p_prices),        # 有車位資料的筆數
+        "community":         (c_rows[0] if c_rows else {}).get("community", name),
+        "tx_count":          len(c_prices),
+        "tx_raw":            tx_raw,
+        "tx_nearby":         len(n_prices),
+        "avg_unit_price":    round(avg_p, 1),
+        "max_unit_price":    round(max(filtered_vals), 1) if filtered_vals else None,
+        "min_unit_price":    round(min(filtered_vals), 1) if filtered_vals else None,
+        "latest_date":       latest,
+        "avg_parking_price": round(sum(p_prices)/len(p_prices), 0) if p_prices else None,
+        "avg_parking_area":  round(sum(p_areas) /len(p_areas),  1) if p_areas  else None,
+        "parking_sample":    len(p_prices),
     }
 
 

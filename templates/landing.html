@@ -770,8 +770,9 @@ async function doEstimate() {
 
     box.innerHTML = `
       <div style="font-size:.7rem;color:var(--mute);margin-bottom:.55rem;">
-        📊 ${d.community} · 近3年有效成交 <b>${d.tx_count}</b> 筆
-        ${d.tx_raw > d.tx_count ? `<span style="color:#b8922a;">（原${d.tx_raw}筆，IQR剔除${d.tx_raw - d.tx_count}筆）</span>` : ''}
+        📊 ${d.community} · 同社區 <b>${d.tx_count}</b> 筆
+        ${d.tx_raw > d.tx_count ? `<span style="color:#b8922a;">（IQR剔除${d.tx_raw - d.tx_count}筆）</span>` : ''}
+        ${d.tx_nearby > 0 ? `+ 周遭補充 <b>${d.tx_nearby}</b> 筆` : ''}
         · 最新：${d.latest_date || '—'}
       </div>
       <div class="result-row"><span>平均單價（純房屋）</span>
