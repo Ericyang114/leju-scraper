@@ -559,14 +559,14 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
     with get_conn() as conn:
         c_rows = _rows(conn, f"""
             SELECT community, total_price, total_area,
-                   parking_price, parking_area, transaction_date, age
+                   parking_price, parking_area, transaction_date, age, building_type
             FROM transactions WHERE {" AND ".join(c_cl)}
             ORDER BY transaction_date DESC
         """, c_p)
         if sid:
             n_rows = _rows(conn, f"""
                 SELECT total_price, total_area,
-                       parking_price, parking_area, transaction_date, age
+                       parking_price, parking_area, transaction_date, age, building_type
                 FROM transactions WHERE {" AND ".join(n_cl)}
                 ORDER BY transaction_date DESC LIMIT 300
             """, n_p)
@@ -597,14 +597,19 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         lo, hi   = q1 - 1.0 * iqr, q3 + 1.0 * iqr
         c_prices = [(p, d) for p, d in c_prices if lo <= p <= hi] or c_prices
 
-    # ── 周遭：先依屋齡 ±7 年篩選，再依均價 ±30% 篩選 ─────────────
+    # ── 周遭篩選①：物件類型需與社區相同 ─────────────────────────
+    c_types = [r.get("building_type") for r in c_rows if r.get("building_type")]
+    if c_types and n_rows:
+        from collections import Counter
+        main_type = Counter(c_types).most_common(1)[0][0]
+        n_rows = [r for r in n_rows if r.get("building_type") == main_type]
+
+    # ── 周遭篩選②：屋齡 ±7 年 ─────────────────────────────────────
     c_ages = [a for r in c_rows if (a := _parse_age(r)) is not None]
     if c_ages and n_rows:
-        med_age  = statistics.median(c_ages)
-        age_lo   = med_age - 7
-        age_hi   = med_age + 7
-        n_rows   = [r for r in n_rows
-                    if (a := _parse_age(r)) is not None and age_lo <= a <= age_hi]
+        med_age = statistics.median(c_ages)
+        n_rows  = [r for r in n_rows
+                   if (a := _parse_age(r)) is not None and med_age - 7 <= a <= med_age + 7]
 
     all_n_prices = [(p, r["transaction_date"])
                     for r in n_rows if (p := _adj_price(r)) is not None]
