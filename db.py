@@ -311,6 +311,12 @@ def _five_year_roc() -> str:
     return f"{roc_year:03d}/01"
 
 
+def _three_year_roc() -> str:
+    """回傳3年前年初的民國 YYY/MM 字串（例：112/01），用於估價器近3年篩選。"""
+    roc_year = date.today().year - 1911 - 3
+    return f"{roc_year:03d}/01"
+
+
 def _build_clauses(
     base_clauses: list,
     base_params: list,
@@ -484,9 +490,9 @@ def get_filtered_stats(
 
 
 def search_communities(query: str, limit: int = 8) -> list:
-    """搜尋社區名稱，回傳含近5年均價統計（用於估價器自動完成）。"""
+    """搜尋社區名稱，回傳含近3年均價統計（用於估價器自動完成）。"""
     q = f"%{query}%"
-    five_yr = _five_year_roc()
+    three_yr = _three_year_roc()
     with get_conn() as conn:
         return _rows(conn, f"""
             SELECT
@@ -506,34 +512,76 @@ def search_communities(query: str, limit: int = 8) -> list:
             GROUP BY t.community, t.sid, s.name
             ORDER BY tx_count DESC
             LIMIT {PH}
-        """, (five_yr, q, limit))
+        """, (three_yr, q, limit))
 
 
 def get_community_estimate(name: str, sid: int = None) -> dict | None:
-    """估價器：取得社區近5年成交統計（排除特殊交易）。"""
-    five_yr = _five_year_roc()
+    """估價器：近3年成交資料，扣除車位後計算每坪單價，並以 IQR×1.5 剔除離群值。"""
+    import statistics
+
+    three_yr = _three_year_roc()
     clauses = [
         f"community={PH}",
         "(is_special_trade IS NULL OR is_special_trade=0)",
         f"transaction_date >= {PH}",
+        "total_price > 0",
+        "total_area  > 0",
     ]
-    params = [name, five_yr]
+    params = [name, three_yr]
     if sid:
         clauses.append(f"sid={PH}")
         params.append(sid)
     where = " AND ".join(clauses)
+
     with get_conn() as conn:
-        return _row(conn, f"""
-            SELECT
-                community,
-                COUNT(*) AS tx_count,
-                ROUND(CAST(AVG(CASE WHEN unit_price > 0 THEN unit_price END) AS NUMERIC), 1) AS avg_unit_price,
-                ROUND(CAST(MAX(CASE WHEN unit_price > 0 THEN unit_price END) AS NUMERIC), 1) AS max_unit_price,
-                ROUND(CAST(MIN(CASE WHEN unit_price > 0 THEN unit_price END) AS NUMERIC), 1) AS min_unit_price,
-                MAX(transaction_date) AS latest_date
+        rows = _rows(conn, f"""
+            SELECT community, total_price, total_area,
+                   parking_price, parking_area, transaction_date
             FROM transactions WHERE {where}
-            GROUP BY community
+            ORDER BY transaction_date DESC
         """, params)
+
+    if not rows:
+        return {"community": name, "tx_count": 0}
+
+    # ── 每筆扣掉車位，算純房屋每坪單價 ──────────────────────────────
+    prices = []
+    for r in rows:
+        house_price = (r["total_price"] or 0) - (r["parking_price"] or 0)
+        house_area  = (r["total_area"]  or 0) - (r["parking_area"]  or 0)
+        if house_price > 0 and house_area > 0:
+            prices.append(house_price / house_area)
+
+    if not prices:
+        return {"community": name, "tx_count": 0}
+
+    tx_raw = len(prices)
+    prices_sorted = sorted(prices)
+
+    # ── IQR × 1.5 過濾（樣本 ≥ 5 才執行）────────────────────────────
+    if tx_raw >= 5:
+        q1, q3 = (statistics.quantiles(prices_sorted, n=4)[0],
+                  statistics.quantiles(prices_sorted, n=4)[2])
+        iqr = q3 - q1
+        lo, hi = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+        filtered = [p for p in prices_sorted if lo <= p <= hi]
+        if not filtered:          # 萬一全被剔完就退回原始
+            filtered = prices_sorted
+    else:
+        filtered = prices_sorted
+
+    avg_p = sum(filtered) / len(filtered)
+    latest = rows[0]["transaction_date"] if rows else None
+
+    return {
+        "community":     rows[0]["community"],
+        "tx_count":      len(filtered),   # IQR 過濾後有效筆數
+        "tx_raw":        tx_raw,           # 過濾前原始筆數
+        "avg_unit_price": round(avg_p, 1),
+        "max_unit_price": round(max(filtered), 1),
+        "min_unit_price": round(min(filtered), 1),
+        "latest_date":   latest,
+    }
 
 
 def get_subarea_by_sid(sid: int) -> dict | None:

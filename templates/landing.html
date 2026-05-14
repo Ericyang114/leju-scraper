@@ -370,7 +370,7 @@
   <div class="panel calc-panel" id="panel-estimate">
     <div class="calc-card">
       <h2>🏷️ 房屋估價器</h2>
-      <div class="info-box mb-3">根據近5年實價登錄成交資料（排除特殊交易）估算合理行情，僅供參考。</div>
+      <div class="info-box mb-3">根據近3年實價登錄成交資料，扣除車位後計算每坪單價，並以 IQR 統計法自動剔除離群值，排除特殊交易，僅供參考。</div>
 
       <!-- 社區自動完成 -->
       <div class="mb-3" style="position:relative;">
@@ -683,7 +683,9 @@ async function doEstimate() {
 
     box.innerHTML = `
       <div style="font-size:.7rem;color:var(--mute);margin-bottom:.55rem;">
-        📊 ${d.community} · 近5年非特殊成交 <b>${d.tx_count}</b> 筆 · 最新：${d.latest_date || '—'}
+        📊 ${d.community} · 近3年有效成交 <b>${d.tx_count}</b> 筆
+        ${d.tx_raw > d.tx_count ? `<span style="color:#b8922a;">（原${d.tx_raw}筆，IQR剔除${d.tx_raw - d.tx_count}筆離群值）</span>` : ''}
+        · 最新：${d.latest_date || '—'}
       </div>
       <div class="result-row"><span>平均單價</span>
         <span style="color:var(--navy);font-weight:700;">${d.avg_unit_price} <small style="font-weight:400;color:var(--mute);">萬/坪</small></span>
@@ -699,7 +701,8 @@ async function doEstimate() {
       </div>
       ${totalHtml}
       <div style="font-size:.67rem;color:var(--mute);margin-top:.7rem;line-height:1.55;">
-        ＊ 估價僅供參考，實際成交受樓層、裝潢、市況等因素影響<br>
+        ＊ 單價已扣除車位坪數與車位價格，區間為均價 ±5%<br>
+        ＊ 僅供參考，實際成交受樓層、裝潢、市況等因素影響<br>
         ＊ 如需精準估價請直接聯繫老楊
       </div>`;
   } catch(e) {
