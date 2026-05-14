@@ -570,17 +570,33 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
     else:
         filtered = prices_sorted
 
-    avg_p = sum(filtered) / len(filtered)
+    avg_p  = sum(filtered) / len(filtered)
     latest = rows[0]["transaction_date"] if rows else None
 
+    # ── 車位統計（另外查，只取有車位資料的筆）────────────────────────
+    p_prices = []
+    p_areas  = []
+    for r in rows:
+        pp = r["parking_price"] or 0
+        pa = r["parking_area"]  or 0
+        if pp > 0 and pa > 0:
+            p_prices.append(pp)
+            p_areas.append(pa)
+
+    avg_parking_price = round(sum(p_prices) / len(p_prices), 0) if p_prices else None
+    avg_parking_area  = round(sum(p_areas)  / len(p_areas),  1) if p_areas  else None
+
     return {
-        "community":     rows[0]["community"],
-        "tx_count":      len(filtered),   # IQR 過濾後有效筆數
-        "tx_raw":        tx_raw,           # 過濾前原始筆數
-        "avg_unit_price": round(avg_p, 1),
-        "max_unit_price": round(max(filtered), 1),
-        "min_unit_price": round(min(filtered), 1),
-        "latest_date":   latest,
+        "community":        rows[0]["community"],
+        "tx_count":         len(filtered),
+        "tx_raw":           tx_raw,
+        "avg_unit_price":   round(avg_p, 1),
+        "max_unit_price":   round(max(filtered), 1),
+        "min_unit_price":   round(min(filtered), 1),
+        "latest_date":      latest,
+        "avg_parking_price": avg_parking_price,   # 萬
+        "avg_parking_area":  avg_parking_area,    # 坪/個
+        "parking_sample":   len(p_prices),        # 有車位資料的筆數
     }
 
 

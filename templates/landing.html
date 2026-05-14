@@ -389,10 +389,29 @@
 
       <div class="mb-3">
         <label class="form-label-sm">坪數（坪）
-          <span style="color:var(--mute);font-size:.68rem;">（選填，填入後估算總價範圍）</span>
+          <span style="color:var(--mute);font-size:.68rem;">（選填，填入後估算總價）</span>
         </label>
         <input type="number" id="est_area" class="form-control form-control-sm"
                placeholder="例：30" min="1" max="500">
+      </div>
+
+      <!-- 車位數量 -->
+      <div class="mb-2">
+        <label class="form-label-sm">車位數量</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="est_pk0" onclick="setParkingCount(0)">無</button>
+          <button class="toggle-btn"        id="est_pk1" onclick="setParkingCount(1)">1 個</button>
+          <button class="toggle-btn"        id="est_pk2" onclick="setParkingCount(2)">2 個</button>
+        </div>
+      </div>
+
+      <!-- 坪數含車位（有車位才顯示） -->
+      <div class="mb-3" id="est_area_type_row" style="display:none;">
+        <label class="form-label-sm">輸入的坪數是否已含車位坪數？</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="est_at_with"    onclick="setAreaType('with')">含車位坪數</button>
+          <button class="toggle-btn"        id="est_at_without" onclick="setAreaType('without')">不含車位坪數</button>
+        </div>
       </div>
 
       <button class="btn-calc" onclick="doEstimate()">開始估價</button>
@@ -603,7 +622,23 @@ function fmt(n) { return isNaN(n) ? '—' : parseFloat(n.toFixed(2)).toLocaleStr
 function fmtNT(n) { return isNaN(n) ? '—' : '$' + Math.round(n).toLocaleString(); }
 
 // ── 估價器 ──
-let _estTimer = null;
+let _estTimer   = null;
+let _estParking = 0;       // 0=無, 1=1個, 2=2個
+let _estAreaType = 'with'; // 'with'=含車位, 'without'=不含
+
+function setParkingCount(n) {
+  _estParking = n;
+  [0, 1, 2].forEach(i =>
+    document.getElementById('est_pk' + i).classList.toggle('active', i === n)
+  );
+  document.getElementById('est_area_type_row').style.display = n > 0 ? 'block' : 'none';
+}
+
+function setAreaType(t) {
+  _estAreaType = t;
+  document.getElementById('est_at_with').classList.toggle('active',    t === 'with');
+  document.getElementById('est_at_without').classList.toggle('active', t === 'without');
+}
 
 function fetchCommunities(q) {
   clearTimeout(_estTimer);
@@ -666,43 +701,89 @@ async function doEstimate() {
     const lo   = (avgP * 0.95).toFixed(1);
     const hi   = (avgP * 1.05).toFixed(1);
 
+    // ── 車位資訊列 ───────────────────────────────────────────────────
+    let parkingInfoHtml = '';
+    if (d.avg_parking_price && d.parking_sample > 0) {
+      parkingInfoHtml = `
+        <div class="result-row">
+          <span>社區平均車位價 <span style="color:var(--mute);font-size:.68rem;">（${d.parking_sample}筆）</span></span>
+          <span style="color:var(--navy);">${fmt(d.avg_parking_price)} 萬／個
+            ${d.avg_parking_area ? `<small style="color:var(--mute);font-weight:400;"> · 約${d.avg_parking_area}坪</small>` : ''}
+          </span>
+        </div>`;
+    }
+
+    // ── 總價估算 ─────────────────────────────────────────────────────
     let totalHtml = '';
     if (area > 0 && avgP > 0) {
-      const est  = (avgP * area).toFixed(0);
-      const estL = (avgP * 0.95 * area).toFixed(0);
-      const estH = (avgP * 1.05 * area).toFixed(0);
+      const pkCount = _estParking;            // 車位數 0/1/2
+      const pkPrice = d.avg_parking_price || 0;
+      const pkArea  = d.avg_parking_area  || 0;
+
+      // 純房屋坪數
+      let houseArea = area;
+      if (pkCount > 0 && _estAreaType === 'with') {
+        houseArea = area - pkArea * pkCount;
+      }
+      houseArea = Math.max(houseArea, 1); // 防呆
+
+      const pkTotal   = pkPrice * pkCount;                     // 車位總價
+      const estHouse  = houseArea * avgP;                      // 房屋估價（均價）
+      const estTotal  = estHouse + pkTotal;
+      const estTotalL = houseArea * avgP * 0.95 + pkTotal;
+      const estTotalH = houseArea * avgP * 1.05 + pkTotal;
+
+      // 坪數說明文字
+      const areaNote = pkCount > 0
+        ? (_estAreaType === 'with'
+            ? `${area}坪（含${pkCount}個車位 ${pkArea>0?'≈'+pkArea*pkCount+'坪':''}，純房屋≈${houseArea.toFixed(1)}坪）`
+            : `${area}坪（不含車位）`)
+        : `${area}坪`;
+
+      // 車位價格缺失提示
+      const noPkWarn = pkCount > 0 && !d.avg_parking_price
+        ? `<div style="color:#b8922a;font-size:.69rem;margin-top:.2rem;">⚠ 此社區無車位成交紀錄，車位價格未計入</div>`
+        : '';
+
       totalHtml = `
-        <div class="result-row" style="margin-top:.5rem;padding-top:.5rem;border-top:1px solid rgba(0,0,0,.08);">
-          <span style="font-weight:700;">預估總價（${area}坪）</span>
-          <span style="color:#c0392b;font-size:1.05rem;font-weight:700;">${fmt(parseFloat(est))} 萬</span>
-        </div>
-        <div style="font-size:.7rem;color:var(--mute);text-align:right;margin-top:.1rem;">
-          合理範圍：約 ${fmt(parseFloat(estL))} – ${fmt(parseFloat(estH))} 萬
+        <div style="margin-top:.6rem;padding-top:.6rem;border-top:1px solid rgba(0,0,0,.08);">
+          <div style="font-size:.7rem;color:var(--mute);margin-bottom:.35rem;">📐 ${areaNote}</div>
+          ${pkCount > 0 && pkPrice > 0 ? `
+          <div class="result-row">
+            <span>純房屋估價</span>
+            <span>${fmt(estHouse)} 萬</span>
+          </div>
+          <div class="result-row">
+            <span>車位價格 × ${pkCount}</span>
+            <span>${fmt(pkTotal)} 萬</span>
+          </div>` : ''}
+          <div class="result-row">
+            <span style="font-weight:700;">預估總價</span>
+            <span style="color:#c0392b;font-size:1.05rem;font-weight:700;">${fmt(estTotal)} 萬</span>
+          </div>
+          <div style="font-size:.7rem;color:var(--mute);text-align:right;margin-top:.1rem;">
+            合理範圍：約 ${fmt(estTotalL)} – ${fmt(estTotalH)} 萬
+          </div>
+          ${noPkWarn}
         </div>`;
     }
 
     box.innerHTML = `
       <div style="font-size:.7rem;color:var(--mute);margin-bottom:.55rem;">
         📊 ${d.community} · 近3年有效成交 <b>${d.tx_count}</b> 筆
-        ${d.tx_raw > d.tx_count ? `<span style="color:#b8922a;">（原${d.tx_raw}筆，IQR剔除${d.tx_raw - d.tx_count}筆離群值）</span>` : ''}
+        ${d.tx_raw > d.tx_count ? `<span style="color:#b8922a;">（原${d.tx_raw}筆，IQR剔除${d.tx_raw - d.tx_count}筆）</span>` : ''}
         · 最新：${d.latest_date || '—'}
       </div>
-      <div class="result-row"><span>平均單價</span>
+      <div class="result-row"><span>平均單價（純房屋）</span>
         <span style="color:var(--navy);font-weight:700;">${d.avg_unit_price} <small style="font-weight:400;color:var(--mute);">萬/坪</small></span>
       </div>
-      <div class="result-row"><span>最高單價</span>
-        <span style="color:#c0392b;">${d.max_unit_price} 萬/坪</span>
-      </div>
-      <div class="result-row"><span>最低單價</span>
-        <span style="color:#27ae60;">${d.min_unit_price} 萬/坪</span>
-      </div>
-      <div class="result-row"><span>合理區間（±5%）</span>
-        <span>${lo} – ${hi} 萬/坪</span>
-      </div>
+      <div class="result-row"><span>最高單價</span><span style="color:#c0392b;">${d.max_unit_price} 萬/坪</span></div>
+      <div class="result-row"><span>最低單價</span><span style="color:#27ae60;">${d.min_unit_price} 萬/坪</span></div>
+      <div class="result-row"><span>合理單價區間（±5%）</span><span>${lo} – ${hi} 萬/坪</span></div>
+      ${parkingInfoHtml}
       ${totalHtml}
       <div style="font-size:.67rem;color:var(--mute);margin-top:.7rem;line-height:1.55;">
-        ＊ 單價已扣除車位坪數與車位價格，區間為均價 ±5%<br>
-        ＊ 僅供參考，實際成交受樓層、裝潢、市況等因素影響<br>
+        ＊ 單價已扣除車位，僅供參考，實際成交受樓層、裝潢、市況等因素影響<br>
         ＊ 如需精準估價請直接聯繫老楊
       </div>`;
   } catch(e) {
