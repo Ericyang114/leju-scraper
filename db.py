@@ -604,6 +604,11 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         lo, hi   = q1 - 1.0 * iqr, q3 + 1.0 * iqr
         c_prices = [(p, d) for p, d in c_prices if lo <= p <= hi] or c_prices
 
+    # ── 中位數地板保護（剔除 < 中位數 × 50% 的異常值）──────────
+    if c_prices:
+        med_floor = statistics.median([p for p, _ in c_prices])
+        c_prices  = [(p, d) for p, d in c_prices if p >= med_floor * 0.50] or c_prices
+
     # ── 周遭篩選①：物件類型需與社區相同 ─────────────────────────
     c_types = [r.get("building_type") for r in c_rows if r.get("building_type")]
     if c_types and n_rows:
@@ -628,20 +633,31 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
     else:
         n_prices = all_n_prices
 
-    # ── 指數衰減加權平均（BASE_N 降至 0.10）──────────────────────
+    # ── 指數衰減加權中位數 ────────────────────────────────────────
     LAMBDA_C, LAMBDA_N, BASE_N = 0.06, 0.08, 0.10
-    wsum = wt = 0.0
+    pw_pairs: list[tuple[float, float]] = []
     for price, d in c_prices:
         w = math.exp(-LAMBDA_C * _months_ago(d))
-        wsum += price * w; wt += w
+        pw_pairs.append((price, w))
     for price, d in n_prices:
         w = BASE_N * math.exp(-LAMBDA_N * _months_ago(d))
-        wsum += price * w; wt += w
+        pw_pairs.append((price, w))
 
-    if wt == 0:
+    if not pw_pairs:
         return {"community": name, "tx_count": 0}
 
-    avg_p = wsum / wt
+    pw_sorted = sorted(pw_pairs, key=lambda x: x[0])
+    total_w   = sum(w for _, w in pw_sorted)
+    if total_w == 0:
+        return {"community": name, "tx_count": 0}
+
+    cumulative = 0.0
+    avg_p = pw_sorted[-1][0]
+    for price, w in pw_sorted:
+        cumulative += w
+        if cumulative >= total_w / 2:
+            avg_p = price
+            break
 
     # ── 車位統計 ───────────────────────────────────────────────────
     p_prices, p_areas = [], []
