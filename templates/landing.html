@@ -6,6 +6,7 @@
   <title>楊肇寧 · 老楊房快說 · 永慶不動產</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     :root {
       --navy:#1a2e5a; --navy2:#243b73; --gold:#b8922a; --gold2:#d4a843;
@@ -96,6 +97,35 @@
     .qr-box img{width:190px;height:190px;border-radius:8px;}
     .qr-close{display:block;width:100%;padding:.42rem;background:#06c755;color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;margin-top:.8rem;}
 
+    /* ── 生活機能 panel ── */
+    .life-panel{padding:0;background:var(--bg);}
+    .life-search-bar{background:var(--navy);padding:.65rem .9rem;display:flex;align-items:center;gap:.5rem;}
+    .life-search-wrap{flex:1;position:relative;}
+    .life-search-wrap input{width:100%;border:none;border-radius:6px;padding:.38rem .7rem;font-size:.82rem;outline:none;}
+    .life-ac-list{position:absolute;top:100%;left:0;right:0;background:#fff;border-radius:0 0 8px 8px;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:9999;max-height:200px;overflow-y:auto;display:none;}
+    .life-ac-item{padding:.44rem .75rem;font-size:.8rem;color:var(--navy);cursor:pointer;border-bottom:1px solid #f0f2f5;display:flex;align-items:center;justify-content:space-between;}
+    .life-ac-item:hover{background:#f0f4ff;}
+    .life-ac-sub{font-size:.67rem;color:var(--mute);}
+    .btn-life-search{background:var(--gold);color:#fff;border:none;border-radius:6px;padding:.38rem .75rem;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+    .btn-life-gps{background:#1a7a56;color:#fff;border:none;border-radius:6px;padding:.38rem .65rem;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+    #life-map{width:100%;height:250px;border:1px solid #dee2e6;}
+    .life-poi-section{background:#fff;padding:.8rem 1rem;}
+    .life-status{font-size:.72rem;padding:.3rem .65rem;border-radius:6px;margin-bottom:.6rem;display:flex;align-items:center;gap:.45rem;}
+    .ls-idle   {background:#f1f5f9;color:var(--mute);}
+    .ls-loading{background:#ede9fe;color:#6d28d9;}
+    .ls-gps    {background:#d1fae5;color:#065f46;}
+    .ls-live   {background:#dcfce7;color:#15803d;}
+    .ls-error  {background:#fee2e2;color:#b91c1c;}
+    .life-poi-cat{margin-bottom:.7rem;}
+    .life-poi-title{font-size:.72rem;font-weight:700;color:var(--mute);letter-spacing:.05em;margin-bottom:.3rem;}
+    .life-poi-list{display:flex;flex-wrap:wrap;gap:.3rem;}
+    .life-poi-tag{background:#f0f4ff;color:var(--navy);font-size:.73rem;padding:.2rem .55rem;border-radius:20px;border:1px solid #e2e8f0;white-space:nowrap;}
+    .life-poi-tag .d{color:var(--mute);font-size:.64rem;margin-left:.2rem;}
+    .life-no-data{font-size:.73rem;color:#bbb;}
+    .life-note{margin-top:.5rem;font-size:.67rem;color:var(--mute);background:#f8faff;border-left:3px solid #93c5fd;padding:.4rem .7rem;border-radius:4px;line-height:1.6;}
+    .lspinner{display:inline-block;width:11px;height:11px;border:2px solid rgba(109,40,217,.3);border-top-color:#6d28d9;border-radius:50%;animation:lspin .7s linear infinite;}
+    @keyframes lspin{to{transform:rotate(360deg);}}
+
     /* ── Footer ── */
     footer{background:var(--navy);color:rgba(255,255,255,.38);text-align:center;font-size:.68rem;padding:1.1rem;}
   </style>
@@ -164,7 +194,7 @@
     <button class="tab-btn row2" onclick="switchTab('land',this)">🏛️ 房地合一</button>
     <button class="tab-btn row2" onclick="switchTab('fees',this)">🧾 買賣雜費</button>
     <button class="tab-btn row2" onclick="switchTab('calc',this)">📐 換算工具</button>
-    <div style="border-top:1px solid rgba(255,255,255,.07);"></div>
+    <button class="tab-btn row2" onclick="switchTab('life',this)">🗺️ 生活機能</button>
   </div>
 
   <!-- ===== 實價登錄 ===== -->
@@ -422,6 +452,25 @@
     </div>
   </div>
 
+  <!-- ===== 生活機能 ===== -->
+  <div class="panel life-panel" id="panel-life">
+    <div class="life-search-bar">
+      <div class="life-search-wrap">
+        <input type="text" id="lifeInput" placeholder="輸入社區名稱…" autocomplete="off"
+          oninput="lifeOnInput()" onkeydown="if(event.key==='Enter')lifeSearchByName()">
+        <div class="life-ac-list" id="lifeAcList"></div>
+      </div>
+      <button class="btn-life-search" onclick="lifeSearchByName()">🔍 查詢</button>
+      <button class="btn-life-gps" id="lifeBtnGps" onclick="lifeSearchByGPS()">📍 定位</button>
+    </div>
+    <div id="life-map"></div>
+    <div class="life-poi-section">
+      <div id="lifeStatus" class="life-status ls-idle">請搜尋社區或點「📍 定位」查詢周遭生活機能</div>
+      <div id="lifePoiContent"></div>
+      <div class="life-note" id="lifeNote" style="display:none"></div>
+    </div>
+  </div>
+
 </div><!-- end tool-section -->
 
 <!-- Footer -->
@@ -432,6 +481,148 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── 生活機能 POI ───────────────────────────────────────────────
+const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+const OVERPASS  = 'https://overpass-api.de/api/interpreter';
+const LIFE_CATS = [
+  {key:'hospital',emoji:'🏥',label:'醫療院所', q:`node["amenity"~"hospital|clinic|pharmacy"](around:800,LAT,LON);`},
+  {key:'school',  emoji:'🏫',label:'學校',     q:`node["amenity"~"school|kindergarten|university"](around:800,LAT,LON);`},
+  {key:'market',  emoji:'🛒',label:'超市/商店',q:`node["shop"~"supermarket|convenience|market"](around:600,LAT,LON);`},
+  {key:'bus',     emoji:'🚌',label:'公車站牌', q:`node["highway"="bus_stop"](around:400,LAT,LON);`},
+  {key:'mrt',     emoji:'🚇',label:'捷運/火車站',q:`node["railway"~"station|subway_entrance"](around:1500,LAT,LON);`},
+  {key:'park',    emoji:'🌳',label:'公園',     q:`node["leisure"="park"](around:600,LAT,LON);way["leisure"="park"](around:600,LAT,LON);`},
+];
+const LIFE_COLORS={hospital:'#ef4444',school:'#f59e0b',market:'#10b981',bus:'#3b82f6',mrt:'#8b5cf6',park:'#22c55e'};
+let lifeMap=null, lifeMarkers=[], lifeAcTimer=null;
+
+function lifeSetStatus(cls,html){const el=document.getElementById('lifeStatus');el.className='life-status '+cls;el.innerHTML=html;}
+function lifeDistM(a,b,c,d){const R=6371000,dA=(c-a)*Math.PI/180,dB=(d-b)*Math.PI/180,x=Math.sin(dA/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dB/2)**2;return Math.round(R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)));}
+function lifeDL(m){return m<1000?`${m}m`:`${(m/1000).toFixed(1)}km`;}
+
+function lifeOnInput(){
+  clearTimeout(lifeAcTimer);
+  const q=document.getElementById('lifeInput').value.trim();
+  if(q.length<2){document.getElementById('lifeAcList').style.display='none';return;}
+  lifeAcTimer=setTimeout(async()=>{
+    try{
+      const r=await fetch(`/api/communities?q=${encodeURIComponent(q)}`);
+      const data=await r.json();
+      const list=document.getElementById('lifeAcList');
+      if(!data.length){list.style.display='none';return;}
+      list.innerHTML=data.map(c=>`<div class="life-ac-item" data-name="${c.name}" onclick="lifeSelectAC(this)"><span>${c.name}</span><span class="life-ac-sub">${c.subarea_name||''} · ${c.avg_unit_price||'-'}萬/坪</span></div>`).join('');
+      list.style.display='block';
+    }catch(e){document.getElementById('lifeAcList').style.display='none';}
+  },300);
+}
+function lifeSelectAC(el){document.getElementById('lifeInput').value=el.dataset.name;document.getElementById('lifeAcList').style.display='none';lifeSearchByName();}
+document.addEventListener('click',e=>{if(!e.target.closest('.life-search-wrap'))document.getElementById('lifeAcList').style.display='none';});
+
+function lifeInitMap(lat,lon){
+  if(lifeMap){lifeMap.setView([lat,lon],16);lifeMarkers.forEach(m=>m.remove());lifeMarkers=[];}
+  else{lifeMap=L.map('life-map').setView([lat,lon],16);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(lifeMap);}
+}
+function lifeAddHome(lat,lon,label,isGPS){
+  const bg=isGPS?'#1a7a56':'#1a2e5a',ic=isGPS?'📍':'🏠';
+  const mk=L.divIcon({html:`<div style="background:${bg};color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:1.05rem;box-shadow:0 2px 8px rgba(0,0,0,.35)">${ic}</div>`,iconSize:[34,34],iconAnchor:[17,17],className:''});
+  L.marker([lat,lon],{icon:mk}).addTo(lifeMap).bindPopup(`<b>${label}</b>`).openPopup();
+  L.circle([lat,lon],{radius:500,color:bg,fillColor:bg,fillOpacity:.05,weight:1.5,dashArray:'5,5'}).addTo(lifeMap);
+}
+function lifeAddMarkers(byCat){
+  LIFE_CATS.forEach(cat=>byCat[cat.key].slice(0,5).forEach(p=>{
+    if(!p.lat||!p.lon)return;
+    const icon=L.divIcon({html:`<div style="background:${LIFE_COLORS[cat.key]};color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:.85rem;box-shadow:0 2px 6px rgba(0,0,0,.22)">${cat.emoji}</div>`,iconSize:[26,26],iconAnchor:[13,13],className:''});
+    const m=L.marker([p.lat,p.lon],{icon}).addTo(lifeMap);
+    m.bindPopup(`${cat.emoji} <b>${p.name}</b><br><small>${lifeDL(p.d)}</small>`);
+    lifeMarkers.push(m);
+  }));
+}
+async function lifeFetchPOI(lat,lon){
+  const allQ=LIFE_CATS.map(c=>c.q.replaceAll('LAT',lat).replaceAll('LON',lon)).join('\n');
+  const q=`[out:json][timeout:15];\n(\n${allQ}\n);\nout body;`;
+  const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),12000);
+  const r=await fetch(OVERPASS,{method:'POST',body:'data='+encodeURIComponent(q),signal:ctrl.signal});
+  return await r.json();
+}
+function lifeParsePOI(els,cLat,cLon){
+  const byCat={};LIFE_CATS.forEach(c=>{byCat[c.key]=[];});
+  els.forEach(el=>{
+    if(!el.lat)return;
+    const d=lifeDistM(cLat,cLon,el.lat,el.lon);
+    const name=el.tags?.name||el.tags?.['name:zh']||el.tags?.['name:en'];
+    if(!name)return;
+    const t=el.tags||{};
+    if(t.amenity==='hospital'||t.amenity==='clinic'||t.amenity==='pharmacy')byCat.hospital.push({name,d,lat:el.lat,lon:el.lon});
+    else if(t.amenity==='school'||t.amenity==='kindergarten'||t.amenity==='university')byCat.school.push({name,d,lat:el.lat,lon:el.lon});
+    else if(t.shop)byCat.market.push({name,d,lat:el.lat,lon:el.lon});
+    else if(t.highway==='bus_stop')byCat.bus.push({name,d,lat:el.lat,lon:el.lon});
+    else if(t.railway)byCat.mrt.push({name,d,lat:el.lat,lon:el.lon});
+    else if(t.leisure==='park')byCat.park.push({name,d,lat:el.lat,lon:el.lon});
+  });
+  Object.keys(byCat).forEach(k=>byCat[k].sort((a,b)=>a.d-b.d));
+  return byCat;
+}
+function lifeRenderList(byCat){
+  let html='';
+  LIFE_CATS.forEach(cat=>{
+    const items=byCat[cat.key].slice(0,6);
+    html+=`<div class="life-poi-cat"><div class="life-poi-title">${cat.emoji} ${cat.label}</div><div class="life-poi-list">`;
+    if(!items.length)html+=`<span class="life-no-data">附近無資料</span>`;
+    else items.forEach(p=>{html+=`<span class="life-poi-tag">${p.name}<span class="d">${lifeDL(p.d)}</span></span>`;});
+    html+=`</div></div>`;
+  });
+  document.getElementById('lifePoiContent').innerHTML=html;
+}
+async function lifeSearchByName(){
+  const name=document.getElementById('lifeInput').value.trim();
+  if(!name)return;
+  document.getElementById('lifeAcList').style.display='none';
+  lifeSetStatus('ls-loading',`<span class="lspinner"></span> 定位「${name}」中…`);
+  document.getElementById('lifePoiContent').innerHTML='';
+  document.getElementById('lifeNote').style.display='none';
+  let lat,lon;
+  try{
+    const r=await fetch(`${NOMINATIM}?q=${encodeURIComponent(name+' 桃園')}&format=json&limit=1`,{headers:{'User-Agent':'LeJu/1.0','Accept-Language':'zh-TW'}});
+    const geo=await r.json();
+    if(!geo.length)throw new Error('not found');
+    lat=parseFloat(geo[0].lat);lon=parseFloat(geo[0].lon);
+  }catch(e){lifeSetStatus('ls-error',`❌ 找不到「${name}」的位置，請確認名稱或改用 📍 定位`);return;}
+  lifeInitMap(lat,lon);lifeAddHome(lat,lon,name,false);
+  lifeSetStatus('ls-loading',`<span class="lspinner"></span> 查詢 ${name} 周遭生活機能…`);
+  try{
+    const data=await lifeFetchPOI(lat,lon);
+    const byCat=lifeParsePOI(data.elements||[],lat,lon);
+    lifeAddMarkers(byCat);lifeRenderList(byCat);
+    lifeSetStatus('ls-live',`✅ ${name} · ${data.elements?.length||0} 筆即時 POI`);
+    const el=document.getElementById('lifeNote');el.innerHTML='ℹ️ 座標由 <b>Nominatim</b> 取得 · POI 由 <b>Overpass API</b> 查詢 · 完全免費';el.style.display='';
+  }catch(e){lifeSetStatus('ls-error','⚠️ POI 查詢失敗，請稍後再試');}
+}
+function lifeSearchByGPS(){
+  if(!navigator.geolocation){lifeSetStatus('ls-error','❌ 您的瀏覽器不支援定位功能');return;}
+  const btn=document.getElementById('lifeBtnGps');
+  btn.textContent='📍 定位中…';
+  lifeSetStatus('ls-gps','<span class="lspinner"></span> 正在取得您的位置…');
+  document.getElementById('lifePoiContent').innerHTML='';
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    btn.textContent='📍 定位';
+    const lat=pos.coords.latitude,lon=pos.coords.longitude,acc=Math.round(pos.coords.accuracy);
+    lifeInitMap(lat,lon);lifeAddHome(lat,lon,`您的位置（±${acc}m）`,true);
+    lifeSetStatus('ls-loading','<span class="lspinner"></span> 查詢附近生活機能…');
+    try{
+      const data=await lifeFetchPOI(lat,lon);
+      const byCat=lifeParsePOI(data.elements||[],lat,lon);
+      lifeAddMarkers(byCat);lifeRenderList(byCat);
+      lifeSetStatus('ls-gps',`📍 您的位置 · GPS ±${acc}m · ${data.elements?.length||0} 筆 POI`);
+      const el=document.getElementById('lifeNote');el.innerHTML=`ℹ️ GPS 精確度：<b>±${acc} 公尺</b>`;el.style.display='';
+    }catch(e){lifeSetStatus('ls-error','⚠️ POI 查詢失敗，請稍後再試');}
+  },err=>{
+    btn.textContent='📍 定位';
+    const msgs={1:'您拒絕了位置授權',2:'無法取得位置（請確認 GPS 已開啟）',3:'定位超時，請重試'};
+    lifeSetStatus('ls-error',`❌ ${msgs[err.code]||'定位失敗'}`);
+  },{enableHighAccuracy:true,timeout:10000,maximumAge:0});
+}
+</script>
 <script>
 // ── Tab switching ──
 function switchTab(name, btn) {
