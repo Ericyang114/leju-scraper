@@ -511,15 +511,17 @@ function lifeOnInput(){
       const data=await r.json();
       const list=document.getElementById('lifeAcList');
       if(!data.length){list.style.display='none';return;}
-      list.innerHTML=data.map(c=>`<div class="life-ac-item" data-name="${c.name}" data-addr="${c.sample_address||''}" onclick="lifeSelectAC(this)"><span>${c.name}</span><span class="life-ac-sub">${c.subarea_name||''} · ${c.avg_unit_price||'-'}萬/坪</span></div>`).join('');
+      list.innerHTML=data.map(c=>`<div class="life-ac-item" data-name="${c.name}" data-sid="${c.sid||''}" data-addr="${c.sample_address||''}" onclick="lifeSelectAC(this)"><span>${c.name}</span><span class="life-ac-sub">${c.subarea_name||''} · ${c.avg_unit_price||'-'}萬/坪</span></div>`).join('');
       list.style.display='block';
     }catch(e){document.getElementById('lifeAcList').style.display='none';}
   },300);
 }
 let _lifeAddr='';
+let _lifeSid='';
 function lifeSelectAC(el){
   document.getElementById('lifeInput').value=el.dataset.name;
   _lifeAddr=el.dataset.addr||'';
+  _lifeSid=el.dataset.sid||'';
   document.getElementById('lifeAcList').style.display='none';
   lifeSearchByName();
 }
@@ -588,19 +590,28 @@ async function lifeSearchByName(){
   document.getElementById('lifePoiContent').innerHTML='';
   document.getElementById('lifeNote').style.display='none';
   let lat,lon;
+  let coordSrc='';
+  const sid=_lifeSid||document.getElementById('est_sid')?.value||'';
   try{
-    // 定位策略：① 地址（最準）→ ② 社區名＋桃園市 → ③ 社區名＋桃園
-    const queries = [];
-    if(_lifeAddr) queries.push(_lifeAddr);
-    queries.push(name+' 桃園市桃園區');
-    queries.push(name+' 桃園');
-    let found=false;
-    for(const q of queries){
-      const r=await fetch(`${NOMINATIM}?q=${encodeURIComponent(q)}&format=json&limit=1`,{headers:{'User-Agent':'LeJu/1.0','Accept-Language':'zh-TW'}});
-      const geo=await r.json();
-      if(geo.length){lat=parseFloat(geo[0].lat);lon=parseFloat(geo[0].lon);found=true;break;}
+    // 定位策略 ① 我們自己的座標庫（最準，來自樂居 API）
+    const cr=await fetch(`/api/community-coords?name=${encodeURIComponent(name)}&sid=${sid}`);
+    if(cr.ok){
+      const cd=await cr.json();
+      if(cd.lat&&cd.lon){lat=cd.lat;lon=cd.lon;coordSrc='db';}
     }
-    if(!found)throw new Error('not found');
+    // 定位策略 ② Nominatim fallback（地址 → 社區名＋桃園市 → 社區名＋桃園）
+    if(!lat){
+      const queries=[];
+      if(_lifeAddr) queries.push(_lifeAddr);
+      queries.push(name+' 桃園市桃園區');
+      queries.push(name+' 桃園');
+      for(const q of queries){
+        const r=await fetch(`${NOMINATIM}?q=${encodeURIComponent(q)}&format=json&limit=1`,{headers:{'User-Agent':'LeJu/1.0','Accept-Language':'zh-TW'}});
+        const geo=await r.json();
+        if(geo.length){lat=parseFloat(geo[0].lat);lon=parseFloat(geo[0].lon);coordSrc='nominatim';break;}
+      }
+    }
+    if(!lat)throw new Error('not found');
   }catch(e){lifeSetStatus('ls-error',`❌ 找不到「${name}」的位置，請改用 📍 定位`);return;}
   lifeInitMap(lat,lon);lifeAddHome(lat,lon,name,false);
   lifeSetStatus('ls-loading',`<span class="lspinner"></span> 查詢 ${name} 周遭生活機能…`);
@@ -609,7 +620,8 @@ async function lifeSearchByName(){
     const byCat=lifeParsePOI(data.elements||[],lat,lon);
     lifeAddMarkers(byCat);lifeRenderList(byCat);
     lifeSetStatus('ls-live',`✅ ${name} · ${data.elements?.length||0} 筆即時 POI`);
-    const el=document.getElementById('lifeNote');el.innerHTML='ℹ️ 座標由 <b>Nominatim</b> 取得 · POI 由 <b>Overpass API</b> 查詢 · 完全免費';el.style.display='';
+    const srcLabel=coordSrc==='db'?'座標來自樂居資料庫':'座標由 Nominatim 取得';
+    const el=document.getElementById('lifeNote');el.innerHTML=`ℹ️ ${srcLabel} · POI 由 <b>Overpass API</b> 查詢 · 完全免費`;el.style.display='';
   }catch(e){lifeSetStatus('ls-error','⚠️ POI 查詢失敗，請稍後再試');}
 }
 function lifeSearchByGPS(){

@@ -115,6 +115,11 @@ def _parse_transaction(sid: int, item: dict) -> dict:
     ratio        = item.get("public_area_ratio")
     ratio_str    = f"{ratio}%" if ratio else None
 
+    # 擷取座標（API 回傳字串，轉 float；無則留 None）
+    def _fl(v):
+        try: return float(v)
+        except (TypeError, ValueError): return None
+
     return {
         "id":               _make_tx_id(sid, item),
         "sid":              sid,
@@ -134,6 +139,8 @@ def _parse_transaction(sid: int, item: dict) -> dict:
         "floor_ratio":      ratio_str,
         "building_type":    item.get("building_type"),
         "is_special_trade": int(item.get("is_special_trade") or 0),
+        "lat":              _fl(item.get("latitude")),
+        "lon":              _fl(item.get("longitude")),
         "_raw":             item,
     }
 

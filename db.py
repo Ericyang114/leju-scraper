@@ -136,6 +136,29 @@ def init_db():
                     records_count INTEGER DEFAULT 0
                 )
             """)
+            _exec(conn, """
+                CREATE TABLE IF NOT EXISTS community_coords (
+                    community TEXT NOT NULL,
+                    sid       INTEGER NOT NULL,
+                    lat       REAL,
+                    lon       REAL,
+                    PRIMARY KEY (community, sid)
+                )
+            """)
+            # 從現有 raw_data 反填座標（只填尚未有記錄的）
+            _exec(conn, """
+                INSERT INTO community_coords (community, sid, lat, lon)
+                SELECT
+                    community, sid,
+                    CAST(raw_data::jsonb->>'latitude'  AS NUMERIC),
+                    CAST(raw_data::jsonb->>'longitude' AS NUMERIC)
+                FROM transactions
+                WHERE raw_data IS NOT NULL
+                  AND community IS NOT NULL
+                  AND raw_data::jsonb->>'latitude' IS NOT NULL
+                  AND raw_data::jsonb->>'longitude' IS NOT NULL
+                ON CONFLICT (community, sid) DO NOTHING
+            """)
         else:
             # SQLite（本機）
             conn.executescript("""
@@ -176,6 +199,13 @@ def init_db():
                     message       TEXT,
                     records_count INTEGER DEFAULT 0
                 );
+                CREATE TABLE IF NOT EXISTS community_coords (
+                    community TEXT NOT NULL,
+                    sid       INTEGER NOT NULL,
+                    lat       REAL,
+                    lon       REAL,
+                    PRIMARY KEY (community, sid)
+                );
             """)
             try:
                 conn.execute("ALTER TABLE transactions ADD COLUMN is_special_trade INTEGER DEFAULT 0")
@@ -188,6 +218,19 @@ def init_db():
                 WHERE (is_special_trade IS NULL OR is_special_trade = 0)
                   AND raw_data IS NOT NULL
                   AND json_extract(raw_data, '$.is_special_trade') IS NOT NULL
+            """)
+            # 從現有 raw_data 反填座標
+            conn.execute("""
+                INSERT OR IGNORE INTO community_coords (community, sid, lat, lon)
+                SELECT
+                    community, sid,
+                    CAST(json_extract(raw_data, '$.latitude')  AS REAL),
+                    CAST(json_extract(raw_data, '$.longitude') AS REAL)
+                FROM transactions
+                WHERE raw_data IS NOT NULL
+                  AND community IS NOT NULL
+                  AND json_extract(raw_data, '$.latitude') IS NOT NULL
+                  AND json_extract(raw_data, '$.longitude') IS NOT NULL
             """)
 
 
@@ -211,6 +254,13 @@ def upsert_transactions(records: list):
     now = datetime.now().isoformat()
     with get_conn() as conn:
         for r in records:
+            # 同步寫入社區座標（僅補缺，不覆蓋）
+            if r.get("lat") and r.get("lon") and r.get("community") and r.get("sid"):
+                _exec(conn, f"""
+                    INSERT INTO community_coords (community, sid, lat, lon)
+                    VALUES ({PH},{PH},{PH},{PH})
+                    ON CONFLICT (community, sid) DO NOTHING
+                """, (r["community"], r["sid"], r["lat"], r["lon"]))
             _exec(conn, f"""
                 INSERT INTO transactions (
                     id, sid, transaction_date, address, community,
@@ -260,11 +310,43 @@ def log_scrape(status: str, message: str = None, count: int = 0):
         """, (datetime.now().isoformat(), status, message, count))
 
 
+def upsert_community_coords(records: list):
+    """寫入社區座標（僅當尚無記錄時才寫）。
+    records: list of dict with keys: community, sid, lat, lon
+    """
+    with get_conn() as conn:
+        for r in records:
+            if not r.get("lat") or not r.get("lon"):
+                continue
+            _exec(conn, f"""
+                INSERT INTO community_coords (community, sid, lat, lon)
+                VALUES ({PH},{PH},{PH},{PH})
+                ON CONFLICT (community, sid) DO NOTHING
+            """, (r["community"], r["sid"], r["lat"], r["lon"]))
+
+
 # ── 讀取 ──────────────────────────────────────────────────────────────────────
 
 def get_subareas() -> list:
     with get_conn() as conn:
         return _rows(conn, "SELECT * FROM subareas ORDER BY name")
+
+
+def get_community_coords(community: str, sid: int = None) -> dict | None:
+    """查詢社區座標，sid 可省略（取第一筆）。"""
+    with get_conn() as conn:
+        if sid:
+            return _row(conn, f"""
+                SELECT lat, lon FROM community_coords
+                WHERE community={PH} AND sid={PH}
+                  AND lat IS NOT NULL AND lon IS NOT NULL
+            """, (community, sid))
+        return _row(conn, f"""
+            SELECT lat, lon FROM community_coords
+            WHERE community={PH}
+              AND lat IS NOT NULL AND lon IS NOT NULL
+            ORDER BY sid LIMIT 1
+        """, (community,))
 
 
 def get_subarea_stats() -> list:

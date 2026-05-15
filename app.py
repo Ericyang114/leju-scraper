@@ -181,6 +181,19 @@ def api_communities():
     return jsonify(results)
 
 
+@app.route("/api/community-coords")
+def api_community_coords():
+    name = request.args.get("name", "").strip()
+    sid_str = request.args.get("sid", "")
+    sid = int(sid_str) if sid_str.isdigit() else None
+    if not name:
+        return jsonify({"error": "name required"}), 400
+    coords = db.get_community_coords(name, sid)
+    if coords and coords.get("lat") and coords.get("lon"):
+        return jsonify({"lat": coords["lat"], "lon": coords["lon"]})
+    return jsonify({"error": "not found"}), 404
+
+
 @app.route("/api/estimate")
 def api_estimate():
     name = request.args.get("name", "").strip()
