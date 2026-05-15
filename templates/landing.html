@@ -828,7 +828,7 @@ function pvRenderDistricts() {
     const subs = _pvByPC[d.pc] || [];
     if (subs.length) {
       const totalTx = subs.reduce((a,s) => a+(s.tx_count||0), 0);
-      const prices  = subs.filter(s => s.avg_unit_price).map(s => s.avg_unit_price);
+      const prices  = subs.filter(s => s.avg_unit_price).map(s => parseFloat(s.avg_unit_price));
       const avg     = prices.length ? (prices.reduce((a,v)=>a+v,0)/prices.length).toFixed(1) : null;
       return `<div class="col"><a class="sa-card h-100" href="#" onclick="pvShowSubareas('${d.name}','${d.pc}');return false;">
         <div class="d-flex justify-content-between align-items-start">
