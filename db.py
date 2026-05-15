@@ -509,7 +509,11 @@ def search_communities(query: str, limit: int = 8) -> list:
                 ROUND(CAST(AVG(CASE WHEN t.unit_price > 0
                                AND t.transaction_date >= {PH}
                                AND (t.is_special_trade IS NULL OR t.is_special_trade=0)
-                               THEN t.unit_price END) AS NUMERIC), 1) AS avg_unit_price
+                               THEN t.unit_price END) AS NUMERIC), 1) AS avg_unit_price,
+                (SELECT address FROM transactions t2
+                 WHERE t2.community = t.community AND t2.sid = t.sid
+                   AND t2.address IS NOT NULL AND t2.address != ''
+                 ORDER BY t2.transaction_date DESC LIMIT 1) AS sample_address
             FROM transactions t
             JOIN subareas s ON s.sid = t.sid
             WHERE t.community LIKE {PH}

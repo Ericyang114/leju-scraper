@@ -511,12 +511,18 @@ function lifeOnInput(){
       const data=await r.json();
       const list=document.getElementById('lifeAcList');
       if(!data.length){list.style.display='none';return;}
-      list.innerHTML=data.map(c=>`<div class="life-ac-item" data-name="${c.name}" onclick="lifeSelectAC(this)"><span>${c.name}</span><span class="life-ac-sub">${c.subarea_name||''} · ${c.avg_unit_price||'-'}萬/坪</span></div>`).join('');
+      list.innerHTML=data.map(c=>`<div class="life-ac-item" data-name="${c.name}" data-addr="${c.sample_address||''}" onclick="lifeSelectAC(this)"><span>${c.name}</span><span class="life-ac-sub">${c.subarea_name||''} · ${c.avg_unit_price||'-'}萬/坪</span></div>`).join('');
       list.style.display='block';
     }catch(e){document.getElementById('lifeAcList').style.display='none';}
   },300);
 }
-function lifeSelectAC(el){document.getElementById('lifeInput').value=el.dataset.name;document.getElementById('lifeAcList').style.display='none';lifeSearchByName();}
+let _lifeAddr='';
+function lifeSelectAC(el){
+  document.getElementById('lifeInput').value=el.dataset.name;
+  _lifeAddr=el.dataset.addr||'';
+  document.getElementById('lifeAcList').style.display='none';
+  lifeSearchByName();
+}
 document.addEventListener('click',e=>{if(!e.target.closest('.life-search-wrap'))document.getElementById('lifeAcList').style.display='none';});
 
 function lifeInitMap(lat,lon){
@@ -583,11 +589,19 @@ async function lifeSearchByName(){
   document.getElementById('lifeNote').style.display='none';
   let lat,lon;
   try{
-    const r=await fetch(`${NOMINATIM}?q=${encodeURIComponent(name+' 桃園')}&format=json&limit=1`,{headers:{'User-Agent':'LeJu/1.0','Accept-Language':'zh-TW'}});
-    const geo=await r.json();
-    if(!geo.length)throw new Error('not found');
-    lat=parseFloat(geo[0].lat);lon=parseFloat(geo[0].lon);
-  }catch(e){lifeSetStatus('ls-error',`❌ 找不到「${name}」的位置，請確認名稱或改用 📍 定位`);return;}
+    // 定位策略：① 地址（最準）→ ② 社區名＋桃園市 → ③ 社區名＋桃園
+    const queries = [];
+    if(_lifeAddr) queries.push(_lifeAddr);
+    queries.push(name+' 桃園市桃園區');
+    queries.push(name+' 桃園');
+    let found=false;
+    for(const q of queries){
+      const r=await fetch(`${NOMINATIM}?q=${encodeURIComponent(q)}&format=json&limit=1`,{headers:{'User-Agent':'LeJu/1.0','Accept-Language':'zh-TW'}});
+      const geo=await r.json();
+      if(geo.length){lat=parseFloat(geo[0].lat);lon=parseFloat(geo[0].lon);found=true;break;}
+    }
+    if(!found)throw new Error('not found');
+  }catch(e){lifeSetStatus('ls-error',`❌ 找不到「${name}」的位置，請改用 📍 定位`);return;}
   lifeInitMap(lat,lon);lifeAddHome(lat,lon,name,false);
   lifeSetStatus('ls-loading',`<span class="lspinner"></span> 查詢 ${name} 周遭生活機能…`);
   try{
@@ -846,8 +860,9 @@ function fetchCommunities(q) {
       box.innerHTML = data.map(c => {
         const esc = c.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
         const avg = c.avg_unit_price ? c.avg_unit_price + '萬/坪' : '暫無均價';
+        const addr = (c.sample_address||'').replace(/'/g,"\\'");
         return `<div class="est-suggestion"
-                     onclick="selectCommunity('${esc}',${c.sid},'${c.subarea_name}')">
+                     onclick="selectCommunity('${esc}',${c.sid},'${c.subarea_name}','${addr}')">
                   <b>${c.name}</b>
                   <span style="color:var(--mute);font-size:.72rem;">
                     &nbsp;${c.subarea_name} · ${c.tx_count}筆 · ${avg}
@@ -859,10 +874,11 @@ function fetchCommunities(q) {
   }, 280);
 }
 
-function selectCommunity(name, sid, subarea) {
+function selectCommunity(name, sid, subarea, addr) {
   document.getElementById('est_community').value = name;
   document.getElementById('est_sid').value        = sid;
   document.getElementById('est_suggestions').style.display = 'none';
+  _lifeAddr = addr || '';  // 同步給生活機能定位使用
 }
 
 async function doEstimate() {
