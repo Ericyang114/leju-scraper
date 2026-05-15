@@ -84,6 +84,9 @@
     .sa-range{font-size:.7rem;color:var(--mute);margin-top:.2rem;}
     .sa-meta{font-size:.68rem;color:var(--mute);margin-top:.5rem;padding-top:.45rem;border-top:1px solid #f0f2f5;display:flex;justify-content:space-between;}
     .badge-cnt{background:#eef2ff;color:var(--navy2);font-size:.62rem;font-weight:600;border-radius:12px;padding:2px 7px;}
+    .btn-back{background:none;border:1px solid #d1d5db;border-radius:7px;padding:3px 10px;font-size:.75rem;color:var(--mute);cursor:pointer;transition:.15s;}
+    .btn-back:hover{background:#f3f4f6;color:var(--navy);}
+    .sa-card.no-data{opacity:.45;pointer-events:none;}
 
     /* ── Estimator suggestions ── */
     .est-suggestion { padding:.48rem .85rem; cursor:pointer; font-size:.82rem; border-bottom:1px solid #f0f2f5; }
@@ -199,32 +202,23 @@
 
   <!-- ===== 實價登錄 ===== -->
   <div class="panel price-panel active" id="panel-price">
-    <div class="section-label mb-3">桃園區 · 生活圈行情</div>
-    {% if stats %}
-    <div class="d-flex gap-3 flex-wrap mb-3" style="font-size:.74rem;color:var(--mute);">
-      {% set total_tx = stats|map(attribute='tx_count')|sum %}
-      <span><b style="color:var(--navy);">{{ stats|length }}</b> 個生活圈</span>
-      <span><b style="color:var(--navy);">{{ "{:,}".format(total_tx) }}</b> 筆成交記錄</span>
-      <span>{% set ns=namespace(l='') %}{% for s in stats %}{% if s.latest_date and s.latest_date>ns.l %}{% set ns.l=s.latest_date %}{% endif %}{% endfor %}最新 <b style="color:var(--navy);">{{ ns.l or '—' }}</b></span>
+
+    <!-- 第一層：選行政區 -->
+    <div id="pv-districts">
+      <div class="section-label mb-3">桃園市 · 選擇行政區</div>
+      <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2" id="pv-district-grid"></div>
     </div>
-    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2">
-      {% for s in stats %}
-      <div class="col">
-        <a class="sa-card h-100" href="/subarea/{{ s.sid }}">
-          <div class="d-flex justify-content-between align-items-start">
-            <div class="sa-name">{{ s.name }}</div>
-            <span class="badge-cnt">{{ s.tx_count }}筆</span>
-          </div>
-          {% if s.avg_unit_price %}
-          <div class="sa-price">{{ "%.1f"|format(s.avg_unit_price) }}<span class="sa-pu"> 萬/坪</span></div>
-          <div class="sa-range"><span style="color:#c0392b;">▲ {{ s.max_unit_price }}</span> &nbsp;<span style="color:#27ae60;">▼ {{ s.min_unit_price }}</span></div>
-          {% else %}<div class="sa-price" style="font-size:.85rem;color:var(--mute);">暫無資料</div>{% endif %}
-          <div class="sa-meta"><span>最新：{{ s.latest_date or '—' }}</span><span style="color:var(--navy);font-weight:600;">查看 ›</span></div>
-        </a>
+
+    <!-- 第二層：選生活圈 -->
+    <div id="pv-subareas" style="display:none">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <button class="btn-back" onclick="pvShowDistricts()">← 返回</button>
+        <div class="section-label mb-0" id="pv-district-title"></div>
       </div>
-      {% endfor %}
+      <div class="d-flex gap-3 flex-wrap mb-3" id="pv-stats-summary" style="font-size:.74rem;color:var(--mute);"></div>
+      <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2" id="pv-subarea-grid"></div>
     </div>
-    {% else %}<div class="text-center py-4 text-muted">資料載入中…</div>{% endif %}
+
   </div>
 
   <!-- ===== 房地合一稅 ===== -->
@@ -816,6 +810,79 @@ function calcFees() {
       + `<div class="result-row"><span>火災＋地震保險</span><span style="color:#6b7280;font-style:italic;">約 $3,000～$10,000 / 年</span></div>`;
   }
 }
+
+// ── 實價登錄：兩層導航 ──
+const _PV_STATS = {{ stats | tojson }};
+const _PV_DISTRICTS = [
+  {name:'桃園區',pc:'330'},{name:'中壢區',pc:'320'},{name:'大溪區',pc:'335'},
+  {name:'楊梅區',pc:'326'},{name:'蘆竹區',pc:'338'},{name:'大園區',pc:'337'},
+  {name:'龜山區',pc:'333'},{name:'八德區',pc:'334'},{name:'龍潭區',pc:'325'},
+  {name:'平鎮區',pc:'324'},{name:'新屋區',pc:'327'},{name:'觀音區',pc:'328'},
+  {name:'復興區',pc:'336'},
+];
+const _pvByPC = {};
+_PV_STATS.forEach(s => { (_pvByPC[s.post_code] = _pvByPC[s.post_code]||[]).push(s); });
+
+function pvRenderDistricts() {
+  document.getElementById('pv-district-grid').innerHTML = _PV_DISTRICTS.map(d => {
+    const subs = _pvByPC[d.pc] || [];
+    if (subs.length) {
+      const totalTx = subs.reduce((a,s) => a+(s.tx_count||0), 0);
+      const prices  = subs.filter(s => s.avg_unit_price).map(s => s.avg_unit_price);
+      const avg     = prices.length ? (prices.reduce((a,v)=>a+v,0)/prices.length).toFixed(1) : null;
+      return `<div class="col"><a class="sa-card h-100" href="#" onclick="pvShowSubareas('${d.name}','${d.pc}');return false;">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="sa-name">${d.name}</div>
+          <span class="badge-cnt">${subs.length} 生活圈</span>
+        </div>
+        ${avg ? `<div class="sa-price">${avg}<span class="sa-pu"> 萬/坪</span></div>` : '<div class="sa-price" style="font-size:.85rem;color:var(--mute);">暫無均價</div>'}
+        <div class="sa-meta"><span>${totalTx.toLocaleString()} 筆</span><span style="color:var(--navy);font-weight:600;">查看 ›</span></div>
+      </a></div>`;
+    } else {
+      return `<div class="col"><div class="sa-card no-data h-100">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="sa-name">${d.name}</div>
+          <span class="badge-cnt" style="background:#f3f4f6;color:#9ca3af;">尚無資料</span>
+        </div>
+        <div class="sa-price" style="font-size:.82rem;color:var(--mute);">資料建置中</div>
+        <div class="sa-meta"><span>—</span></div>
+      </div></div>`;
+    }
+  }).join('');
+}
+
+function pvShowSubareas(districtName, postCode) {
+  const subs = _pvByPC[postCode] || [];
+  document.getElementById('pv-district-title').textContent = districtName + ' · 生活圈行情';
+  const totalTx = subs.reduce((a,s)=>a+(s.tx_count||0),0);
+  const latest  = subs.reduce((a,s)=>((s.latest_date||'')>a?s.latest_date:a),'');
+  document.getElementById('pv-stats-summary').innerHTML =
+    `<span><b style="color:var(--navy);">${subs.length}</b> 個生活圈</span>` +
+    `<span><b style="color:var(--navy);">${totalTx.toLocaleString()}</b> 筆成交記錄</span>` +
+    (latest ? `<span>最新 <b style="color:var(--navy);">${latest}</b></span>` : '');
+  document.getElementById('pv-subarea-grid').innerHTML = subs.length ? subs.map(s =>
+    `<div class="col"><a class="sa-card h-100" href="/subarea/${s.sid}">
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="sa-name">${s.name}</div>
+        <span class="badge-cnt">${s.tx_count}筆</span>
+      </div>
+      ${s.avg_unit_price
+        ? `<div class="sa-price">${Number(s.avg_unit_price).toFixed(1)}<span class="sa-pu"> 萬/坪</span></div>
+           <div class="sa-range"><span style="color:#c0392b;">▲ ${s.max_unit_price}</span> &nbsp;<span style="color:#27ae60;">▼ ${s.min_unit_price}</span></div>`
+        : '<div class="sa-price" style="font-size:.85rem;color:var(--mute);">暫無資料</div>'}
+      <div class="sa-meta"><span>最新：${s.latest_date||'—'}</span><span style="color:var(--navy);font-weight:600;">查看 ›</span></div>
+    </a></div>`).join('')
+    : '<div class="col-12 text-center py-4" style="color:var(--mute);">此區尚無資料，敬請期待</div>';
+  document.getElementById('pv-districts').style.display = 'none';
+  document.getElementById('pv-subareas').style.display  = '';
+}
+
+function pvShowDistricts() {
+  document.getElementById('pv-subareas').style.display  = 'none';
+  document.getElementById('pv-districts').style.display = '';
+}
+
+pvRenderDistricts();
 
 // ── 坪數換算 ──
 function pingToM2() {
