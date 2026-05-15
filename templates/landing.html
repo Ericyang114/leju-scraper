@@ -352,7 +352,7 @@
       </div>
       <button class="btn-calc" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);" onclick="calcFees()">試算雜費</button>
       <div class="result-box" id="f_result" style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);"></div>
-      <div class="info-box">土地增值稅：一般用地稅率分3級（20%、30%、40%），自用住宅優惠稅率 10%。塗銷費：土地、建物每增加一筆加收 1/4。<br>* 公部門費用依實際稅單金額為主　* 代書收費依代書事務所為主</div>
+      <div class="info-box">* 契稅依房屋評定現值計算，與成交價無直接關係，請向代書確認<br>* 貸款相關費用依各銀行規定不同，僅供參考<br>* 公部門費用依實際稅單金額為主　* 代書收費依代書事務所為主</div>
     </div>
   </div>
 
@@ -785,24 +785,35 @@ function calcFees() {
       + rows.map(([k,v])=>`<div class="result-row"><span>${k}</span><span>$${Math.round(v).toLocaleString()}</span></div>`).join('')
       + `<div class="result-row"><span>費用總計</span><span>$${Math.round(total).toLocaleString()}</span></div>`;
   } else {
-    const agency = price * 10000 * 0.02;
-    const pen    = 1000;
-    const escrow = price * 10000 * 0.0003;
-    const notary = 20000;
-    const stamp  = price * 10000 * 0.001;
+    const agency   = price * 10000 * 0.02;
+    const pen      = 1000;
+    const escrow   = price * 10000 * 0.0003;
+    const notary   = 20000;
+    const stamp    = price * 10000 * 0.001;
+    const reg      = 2000;
+    const transfer = 3000;
     rows = [
       ['仲介服務費 (2%)', agency],
       ['潤筆費', pen],
       ['履保費用 (萬分之3)', escrow],
       ['代書費（估）', notary],
       ['印花稅 (0.1%)', stamp],
+      ['實價登錄代辦費', reg],
+      ['所有權移轉登記規費（估）', transfer],
     ];
-    total = agency + pen + escrow + notary + stamp;
+    total = agency + pen + escrow + notary + stamp + reg + transfer;
     const box = document.getElementById('f_result');
     box.classList.add('show');
-    box.innerHTML = `<div style="font-size:.75rem;font-weight:700;color:#7c3aed;margin-bottom:.5rem;">買方預估雜項費用</div>`
+    box.innerHTML =
+      `<div style="font-size:.75rem;font-weight:700;color:#7c3aed;margin-bottom:.5rem;">買方預估雜項費用</div>`
       + rows.map(([k,v])=>`<div class="result-row"><span>${k}</span><span>$${Math.round(v).toLocaleString()}</span></div>`).join('')
-      + `<div class="result-row"><span>費用總計</span><span>$${Math.round(total).toLocaleString()}</span></div>`;
+      + `<div class="result-row" style="font-weight:700;color:#7c3aed;border-top:1.5px solid rgba(124,58,237,.25);margin-top:4px;padding-top:8px;"><span>費用小計</span><span>$${Math.round(total).toLocaleString()}</span></div>`
+      + `<div style="font-size:.72rem;font-weight:700;color:#6d28d9;background:rgba(109,40,217,.08);border-radius:6px;padding:4px 8px;margin:10px 0 6px;">📌 另需注意（不計入小計）</div>`
+      + `<div class="result-row"><span>契稅</span><span style="color:#6b7280;font-style:italic;">房屋評定現值 × 6%</span></div>`
+      + `<div style="font-size:.72rem;font-weight:700;color:#6d28d9;background:rgba(109,40,217,.08);border-radius:6px;padding:4px 8px;margin:10px 0 6px;">🏦 若有辦理貸款，另計</div>`
+      + `<div class="result-row"><span>貸款設定規費</span><span style="color:#6b7280;font-style:italic;">貸款金額 × 1.2 × 0.1%</span></div>`
+      + `<div class="result-row"><span>銀行開辦費</span><span style="color:#6b7280;font-style:italic;">約 $3,000～$10,000</span></div>`
+      + `<div class="result-row"><span>火災＋地震保險</span><span style="color:#6b7280;font-style:italic;">約 $3,000～$10,000 / 年</span></div>`;
   }
 }
 
