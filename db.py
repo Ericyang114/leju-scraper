@@ -4,7 +4,6 @@
 - 無 DATABASE_URL → SQLite（本機開發）
 """
 import os
-import json
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, date
@@ -267,9 +266,9 @@ def upsert_transactions(records: list):
                     floor, total_floor, age, total_price, unit_price,
                     total_area, house_area, parking_type, parking_price,
                     parking_area, floor_ratio, building_type, is_special_trade,
-                    raw_data, scraped_at
+                    scraped_at
                 ) VALUES ({PH},{PH},{PH},{PH},{PH},{PH},{PH},{PH},{PH},{PH},
-                          {PH},{PH},{PH},{PH},{PH},{PH},{PH},{PH},{PH},{PH})
+                          {PH},{PH},{PH},{PH},{PH},{PH},{PH},{PH},{PH})
                 ON CONFLICT (id) DO UPDATE SET
                     transaction_date=EXCLUDED.transaction_date,
                     address=EXCLUDED.address,
@@ -287,7 +286,6 @@ def upsert_transactions(records: list):
                     floor_ratio=EXCLUDED.floor_ratio,
                     building_type=EXCLUDED.building_type,
                     is_special_trade=EXCLUDED.is_special_trade,
-                    raw_data=EXCLUDED.raw_data,
                     scraped_at=EXCLUDED.scraped_at
             """, (
                 r.get("id"), r.get("sid"), r.get("transaction_date"),
@@ -297,8 +295,7 @@ def upsert_transactions(records: list):
                 r.get("total_area"), r.get("house_area"),
                 r.get("parking_type"), r.get("parking_price"), r.get("parking_area"),
                 r.get("floor_ratio"), r.get("building_type"),
-                r.get("is_special_trade", 0),
-                json.dumps(r.get("_raw", {}), ensure_ascii=False), now,
+                r.get("is_special_trade", 0), now,
             ))
 
 
@@ -347,6 +344,57 @@ def get_community_coords(community: str, sid: int = None) -> dict | None:
               AND lat IS NOT NULL AND lon IS NOT NULL
             ORDER BY sid LIMIT 1
         """, (community,))
+
+
+def get_district_stats() -> list:
+    """各區統計摘要（有資料的才回傳）。"""
+    three_yr = _three_year_roc()
+    with get_conn() as conn:
+        return _rows(conn, f"""
+            SELECT
+                s.post_code,
+                COUNT(DISTINCT s.sid)                                              AS subarea_count,
+                COUNT(t.id)                                                        AS tx_count,
+                ROUND(CAST(AVG(CASE WHEN t.unit_price > 0
+                               AND t.transaction_date >= {PH}
+                               AND (t.is_special_trade IS NULL OR t.is_special_trade=0)
+                               THEN t.unit_price END) AS NUMERIC), 1)              AS avg_unit_price,
+                MAX(t.transaction_date)                                            AS latest_date
+            FROM subareas s
+            LEFT JOIN transactions t ON s.sid = t.sid
+            GROUP BY s.post_code
+            HAVING COUNT(t.id) > 0
+        """, (three_yr,))
+
+
+def get_subareas_by_post_code(post_code: str) -> list:
+    """取得某區（郵遞區號）的所有生活圈及統計。"""
+    three_yr = _three_year_roc()
+    with get_conn() as conn:
+        return _rows(conn, f"""
+            SELECT
+                s.sid, s.name, s.post_code, s.updated_at,
+                COUNT(t.id)                                                        AS tx_count,
+                ROUND(CAST(AVG(CASE WHEN t.unit_price > 0
+                               AND t.transaction_date >= {PH}
+                               AND (t.is_special_trade IS NULL OR t.is_special_trade=0)
+                               THEN t.unit_price END) AS NUMERIC), 1)              AS avg_unit_price,
+                ROUND(CAST(MAX(CASE WHEN t.unit_price > 0
+                               AND t.transaction_date >= {PH}
+                               AND (t.is_special_trade IS NULL OR t.is_special_trade=0)
+                               THEN t.unit_price END) AS NUMERIC), 1)              AS max_unit_price,
+                ROUND(CAST(MIN(CASE WHEN t.unit_price > 0
+                               AND t.transaction_date >= {PH}
+                               AND (t.is_special_trade IS NULL OR t.is_special_trade=0)
+                               THEN t.unit_price END) AS NUMERIC), 1)              AS min_unit_price,
+                MAX(CASE WHEN (t.is_special_trade IS NULL OR t.is_special_trade=0)
+                         THEN t.transaction_date END)                              AS latest_date
+            FROM subareas s
+            LEFT JOIN transactions t ON s.sid = t.sid
+            WHERE s.post_code = {PH}
+            GROUP BY s.sid, s.name, s.post_code, s.updated_at
+            ORDER BY tx_count DESC NULLS LAST
+        """, (three_yr, three_yr, three_yr, post_code))
 
 
 def get_subarea_stats() -> list:

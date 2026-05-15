@@ -58,6 +58,27 @@ scheduler = BackgroundScheduler(timezone="Asia/Taipei")
 scheduler.add_job(_run_scrape, "cron", hour=2, minute=0, id="daily_scrape")
 scheduler.start()
 
+# ── 桃園市行政區對照表 ─────────────────────────────────────────────────────────
+
+TAOYUAN_DISTRICTS = [
+    {"name": "桃園區", "post_code": "330"},
+    {"name": "中壢區", "post_code": "320"},
+    {"name": "大溪區", "post_code": "335"},
+    {"name": "楊梅區", "post_code": "326"},
+    {"name": "蘆竹區", "post_code": "338"},
+    {"name": "大園區", "post_code": "337"},
+    {"name": "龜山區", "post_code": "333"},
+    {"name": "八德區", "post_code": "334"},
+    {"name": "龍潭區", "post_code": "325"},
+    {"name": "平鎮區", "post_code": "324"},
+    {"name": "新屋區", "post_code": "327"},
+    {"name": "觀音區", "post_code": "328"},
+    {"name": "復興區", "post_code": "336"},
+]
+
+_POST_CODE_MAP = {d["post_code"]: d["name"] for d in TAOYUAN_DISTRICTS}
+
+
 # ── 路由 ──────────────────────────────────────────────────────────────────────
 
 @app.route("/")
@@ -65,6 +86,37 @@ def landing():
     stats = db.get_subarea_stats()
     last  = db.get_last_scrape()
     return render_template("landing.html", stats=stats, last_scrape=last)
+
+
+@app.route("/price")
+def price_districts():
+    """桃園市各行政區選擇頁。"""
+    district_stats = {r["post_code"]: r for r in db.get_district_stats()}
+    districts = []
+    for d in TAOYUAN_DISTRICTS:
+        stat = district_stats.get(d["post_code"], {})
+        districts.append({
+            "name":          d["name"],
+            "post_code":     d["post_code"],
+            "subarea_count": stat.get("subarea_count", 0),
+            "tx_count":      stat.get("tx_count", 0),
+            "avg_unit_price":stat.get("avg_unit_price"),
+            "latest_date":   stat.get("latest_date"),
+            "has_data":      bool(stat.get("tx_count", 0)),
+        })
+    return render_template("districts.html", districts=districts)
+
+
+@app.route("/price/<district_name>")
+def price_district(district_name):
+    """某行政區的生活圈列表。"""
+    d = next((x for x in TAOYUAN_DISTRICTS if x["name"] == district_name), None)
+    if not d:
+        return "找不到該行政區", 404
+    stats = db.get_subareas_by_post_code(d["post_code"])
+    return render_template("district.html",
+                           district_name=district_name,
+                           stats=stats)
 
 
 @app.route("/dashboard")
