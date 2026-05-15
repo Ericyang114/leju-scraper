@@ -475,7 +475,7 @@
 
 <!-- Footer -->
 <footer>
-  <div>資料來源：內政部實價登錄 · 由樂居平台整理</div>
+  <div>資料來源：內政部實價登錄</div>
   <div class="mt-1">本頁資訊僅供參考，實際成交以官方登錄為準</div>
   <div class="mt-2"><a href="/dashboard" style="color:rgba(255,255,255,.2);font-size:.62rem;text-decoration:none;">管理後台</a></div>
 </footer>
@@ -620,7 +620,7 @@ async function lifeSearchByName(){
     const byCat=lifeParsePOI(data.elements||[],lat,lon);
     lifeAddMarkers(byCat);lifeRenderList(byCat);
     lifeSetStatus('ls-live',`✅ ${name} · ${data.elements?.length||0} 筆即時 POI`);
-    const srcLabel=coordSrc==='db'?'座標來自樂居資料庫':'座標由 Nominatim 取得';
+    const srcLabel=coordSrc==='db'?'座標來自實價登錄資料庫':'座標由 Nominatim 取得';
     const el=document.getElementById('lifeNote');el.innerHTML=`ℹ️ ${srcLabel} · POI 由 <b>Overpass API</b> 查詢 · 完全免費`;el.style.display='';
   }catch(e){lifeSetStatus('ls-error','⚠️ POI 查詢失敗，請稍後再試');}
 }
