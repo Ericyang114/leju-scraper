@@ -37,13 +37,20 @@
     /* ── Tab system ── */
     .tool-section{background:#fff;}
     .tool-header{background:var(--navy);color:var(--gold2);font-size:.82rem;font-weight:700;letter-spacing:.08em;padding:.55rem 1.1rem;display:flex;align-items:center;gap:.4rem;}
-    .tab-bar{display:flex;overflow-x:auto;background:#1e2d52;scrollbar-width:none;}
-    .tab-bar::-webkit-scrollbar{display:none;}
-    .tab-btn{flex-shrink:0;padding:.5rem .85rem;font-size:.75rem;font-weight:600;color:rgba(255,255,255,.5);cursor:pointer;border:none;background:transparent;border-bottom:3px solid transparent;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:.3rem;}
+    .tab-bar{display:grid;grid-template-columns:repeat(4,1fr);background:#1e2d52;}
+    .tab-btn{padding:.52rem .4rem;font-size:.73rem;font-weight:600;color:rgba(255,255,255,.5);cursor:pointer;border:none;background:transparent;border-bottom:3px solid transparent;white-space:nowrap;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:.25rem;text-align:center;}
     .tab-btn:hover{color:rgba(255,255,255,.9);}
     .tab-btn.active{color:#fff;border-bottom-color:var(--gold2);background:rgba(255,255,255,.06);}
     .tab-btn.t-price.active{border-bottom-color:#5de8a8;color:#5de8a8;}
+    .tab-btn.row2{border-top:1px solid rgba(255,255,255,.07);}
     .panel{display:none;} .panel.active{display:block;}
+
+    /* ── 懸浮 CTA ── */
+    .float-cta{position:fixed;bottom:1.4rem;right:1.2rem;display:flex;flex-direction:column;gap:.55rem;z-index:999;}
+    .float-btn{width:50px;height:50px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.25);transition:transform .15s;text-decoration:none;font-size:1.3rem;}
+    .float-btn:hover{transform:scale(1.1);}
+    .float-btn-call{background:var(--gold);}
+    .float-btn-line{background:#06c755;}
 
     /* ── Calculator common ── */
     .calc-panel{padding:1.1rem 1rem;background:var(--bg);}
@@ -148,16 +155,16 @@
     老楊全能房產實用工具
   </div>
 
-  <!-- Tab bar -->
+  <!-- Tab bar：4+3 兩排 -->
   <div class="tab-bar">
     <button class="tab-btn t-price active" onclick="switchTab('price',this)">📋 實價登錄</button>
-    <button class="tab-btn" onclick="switchTab('land',this)">🏛️ 房地合一</button>
-    <button class="tab-btn" onclick="switchTab('afford',this)">🏠 購屋能力</button>
-    <button class="tab-btn" onclick="switchTab('mortgage',this)">🏦 房貸試算</button>
-    <button class="tab-btn" onclick="switchTab('fees',this)">🧾 買賣雜費</button>
-    <button class="tab-btn" onclick="switchTab('ping',this)">📐 坪數換算</button>
-    <button class="tab-btn" onclick="switchTab('parking',this)">🚗 車位折算</button>
     <button class="tab-btn" onclick="switchTab('estimate',this)">🏷️ 房屋估價器</button>
+    <button class="tab-btn" onclick="switchTab('mortgage',this)">🏦 房貸試算</button>
+    <button class="tab-btn" onclick="switchTab('afford',this)">🏠 購屋能力</button>
+    <button class="tab-btn row2" onclick="switchTab('land',this)">🏛️ 房地合一</button>
+    <button class="tab-btn row2" onclick="switchTab('fees',this)">🧾 買賣雜費</button>
+    <button class="tab-btn row2" onclick="switchTab('calc',this)">📐 換算工具</button>
+    <div style="border-top:1px solid rgba(255,255,255,.07);"></div>
   </div>
 
   <!-- ===== 實價登錄 ===== -->
@@ -319,8 +326,8 @@
     </div>
   </div>
 
-  <!-- ===== 坪數換算 ===== -->
-  <div class="panel calc-panel" id="panel-ping">
+  <!-- ===== 換算工具（坪數＋車位合併）===== -->
+  <div class="panel calc-panel" id="panel-calc">
     <div class="calc-card">
       <h2>📐 坪數換算</h2>
       <div class="info-box mb-3" style="background:#fff8e1;">換算公式：1 坪 = 3.30579 平方公尺　／　1 平方公尺 = 0.3025 坪</div>
@@ -334,10 +341,6 @@
         <input type="number" id="p_m2" class="form-control form-control-sm" placeholder="0" oninput="m2ToPing()">
       </div>
     </div>
-  </div>
-
-  <!-- ===== 車位折算 ===== -->
-  <div class="panel calc-panel" id="panel-parking">
     <div class="calc-card">
       <h2>🚗 車位折算</h2>
       <div class="info-box mb-3">實價登錄或廣告傳單常包含車位價格與坪數，此功能可計算出「扣除車位後的真實房屋單價」。</div>
@@ -747,7 +750,11 @@ async function doEstimate() {
 
       totalHtml = `
         <div style="margin-top:.6rem;padding-top:.6rem;border-top:1px solid rgba(0,0,0,.08);">
-          <div style="font-size:.7rem;color:var(--mute);margin-bottom:.35rem;">📐 ${areaNote}</div>
+          <div style="font-size:.7rem;color:var(--mute);margin-bottom:.5rem;">📐 ${areaNote}</div>
+          <div style="background:#fff;border-radius:8px;padding:.7rem;text-align:center;margin-bottom:.5rem;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+            <div style="font-size:.68rem;color:var(--mute);margin-bottom:.2rem;">合理總價範圍</div>
+            <div style="font-size:1.5rem;font-weight:700;color:#c0392b;">${fmt(estTotalL)} – ${fmt(estTotalH)} 萬</div>
+          </div>
           ${pkCount > 0 && pkPrice > 0 ? `
           <div class="result-row">
             <span>純房屋估價範圍</span>
@@ -757,33 +764,23 @@ async function doEstimate() {
             <span>車位價格 × ${pkCount}</span>
             <span>${fmt(pkTotal)} 萬</span>
           </div>` : ''}
-          <div class="result-row">
-            <span style="font-weight:700;">合理總價範圍</span>
-            <span style="color:#c0392b;font-size:1.05rem;font-weight:700;">${fmt(estTotalL)} – ${fmt(estTotalH)} 萬</span>
-          </div>
           ${noPkWarn}
         </div>`;
     }
 
+    const nearbyNote = d.tx_nearby > 0 ? `＋周遭 ${d.tx_nearby} 筆` : '';
+    const filterNote = d.tx_raw > d.tx_count ? `（已自動排除異常成交）` : '';
     box.innerHTML = `
-      <div style="font-size:.7rem;color:var(--mute);margin-bottom:.55rem;">
-        📊 ${d.community} · 同社區 <b>${d.tx_count}</b> 筆
-        ${d.tx_raw > d.tx_count ? `<span style="color:#b8922a;">（IQR剔除${d.tx_raw - d.tx_count}筆）</span>` : ''}
-        ${d.tx_nearby > 0 ? `+ 周遭補充 <b>${d.tx_nearby}</b> 筆` : ''}
-        · 最新：${d.latest_date || '—'}
+      <div style="font-size:.7rem;color:var(--mute);margin-bottom:.6rem;">
+        📊 根據 <b>${d.tx_count}</b> 筆近期${d.community}實價登錄資料${filterNote}${nearbyNote} · 最新：${d.latest_date || '—'}
       </div>
-      <div class="result-row"><span>平均單價（純房屋）</span>
-        <span style="color:var(--navy);font-weight:700;">${d.avg_unit_price} <small style="font-weight:400;color:var(--mute);">萬/坪</small></span>
-      </div>
-      <div class="result-row"><span>最高單價</span><span style="color:#c0392b;">${d.max_unit_price} 萬/坪</span></div>
-      <div class="result-row"><span>最低單價</span><span style="color:#27ae60;">${d.min_unit_price} 萬/坪</span></div>
-      <div class="result-row"><span>成交集中區間（Q1–Q3）</span>
-        <span>${d.q1 ?? lo} – ${d.q3 ?? hi} 萬/坪</span>
+      <div class="result-row"><span>近2年成交單價區間</span>
+        <span style="color:var(--navy);font-weight:700;">${d.q1 ?? lo} – ${d.q3 ?? hi} <small style="font-weight:400;color:var(--mute);">萬/坪</small></span>
       </div>
       ${parkingInfoHtml}
       ${totalHtml}
       <div style="font-size:.67rem;color:var(--mute);margin-top:.7rem;line-height:1.55;">
-        ＊ 單價已扣除車位；區間為同社區實際成交 Q1–Q3 集中帶<br>
+        ＊ 單價已扣除車位坪數與車位價格計算<br>
         ＊ 僅供參考，實際成交受樓層、裝潢、市況等因素影響<br>
         ＊ 如需精準估價請直接聯繫老楊
       </div>`;
@@ -800,5 +797,13 @@ document.addEventListener('click', e => {
   }
 });
 </script>
+
+<!-- ② 懸浮 CTA 按鈕 -->
+<div class="float-cta">
+  <a href="tel:0935195944" class="float-btn float-btn-call" title="撥打電話">📞</a>
+  <button class="float-btn float-btn-line" title="加 LINE 好友"
+          onclick="document.getElementById('lineModal').classList.add('show')">💬</button>
+</div>
+
 </body>
 </html>
