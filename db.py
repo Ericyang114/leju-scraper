@@ -397,6 +397,14 @@ def get_subareas_by_post_code(post_code: str) -> list:
         """, (three_yr, three_yr, three_yr, post_code))
 
 
+def get_subarea_latest_date(sid: int) -> str | None:
+    """回傳某生活圈最新的交易日期，無資料則回傳 None。"""
+    with get_conn() as conn:
+        return _scalar(conn, f"""
+            SELECT MAX(transaction_date) FROM transactions WHERE sid={PH}
+        """, (sid,))
+
+
 def get_subarea_stats() -> list:
     five_yr = _five_year_roc()
     with get_conn() as conn:

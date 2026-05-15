@@ -21,8 +21,24 @@ LEJU_WEB  = "https://www.leju.com.tw"
 API_BASE  = "https://api.leju.com.tw/api"
 CITY_CODE = "H"
 CITY_NAME = "桃園市"
-POST_CODE = "330"   # 桃園區
 SEED_SID  = 11019   # 小檜溪重劃區，用於暖機 CF session
+
+# 桃園市各行政區（名稱 → 郵遞區號）
+TAOYUAN_DISTRICTS = [
+    {"name": "桃園區", "post_code": "330"},
+    {"name": "中壢區", "post_code": "320"},
+    {"name": "大溪區", "post_code": "335"},
+    {"name": "楊梅區", "post_code": "326"},
+    {"name": "蘆竹區", "post_code": "338"},
+    {"name": "大園區", "post_code": "337"},
+    {"name": "龜山區", "post_code": "333"},
+    {"name": "八德區", "post_code": "334"},
+    {"name": "龍潭區", "post_code": "325"},
+    {"name": "平鎮區", "post_code": "324"},
+    {"name": "新屋區", "post_code": "327"},
+    {"name": "觀音區", "post_code": "328"},
+    {"name": "復興區", "post_code": "336"},
+]
 
 API_HEADERS = {
     "Referer":         f"{LEJU_WEB}/",
@@ -71,11 +87,11 @@ def make_session() -> cf_requests.Session:
 
 # ── Fetch helpers ────────────────────────────────────────────────────────────
 
-def fetch_subareas(s: cf_requests.Session) -> list[dict]:
-    """取得桃園區所有生活圈清單。"""
+def fetch_subareas(s: cf_requests.Session, post_code: str) -> list[dict]:
+    """取得指定行政區所有生活圈清單。"""
     r = s.get(
         f"{API_BASE}/region_price/subarea/list",
-        params={"post_code": POST_CODE},
+        params={"post_code": post_code},
         headers=API_HEADERS,
         timeout=15,
     )
@@ -88,7 +104,7 @@ def fetch_subareas(s: cf_requests.Session) -> list[dict]:
         {
             "sid":       int(item["id"]),
             "name":      item.get("small_area_name") or item.get("name") or str(item["id"]),
-            "post_code": POST_CODE,
+            "post_code": post_code,
         }
         for item in raw
         if item.get("id") and (item.get("small_area_status", 1) == 1)
@@ -154,12 +170,13 @@ def _query_once(
     name: str,
     date_start: str,
     date_end: str,
+    post_code: str = "330",
 ) -> list[dict]:
     """單次 API 呼叫，最多回傳 _PER_PAGE 筆。"""
     params = {
         "city_code":             CITY_CODE,
         "city_name":             CITY_NAME,
-        "post_code":             POST_CODE,
+        "post_code":             post_code,
         "tag":                   31,
         "tag_id":                sid,
         "text":                  name,
@@ -201,12 +218,13 @@ def _fetch_range(
     date_start: str,
     date_end: str,
     depth: int = 0,
+    post_code: str = "330",
 ) -> list[dict]:
     """抓取日期範圍內的所有資料。
     若回傳剛好 _PER_PAGE 筆（可能被截斷），自動對半拆分再遞迴查詢，
     直到每段結果 < _PER_PAGE 筆或已縮小至單日為止。
     """
-    records = _query_once(s, sid, name, date_start, date_end)
+    records = _query_once(s, sid, name, date_start, date_end, post_code)
 
     # 結果不足上限，或已達最大遞迴深度（防護），直接回傳
     if len(records) < _PER_PAGE or depth >= 6:
@@ -230,9 +248,9 @@ def _fetch_range(
               sid, date_start, date_end, depth)
 
     time.sleep(0.25)
-    left  = _fetch_range(s, sid, name, date_start,             mid_d.strftime("%Y-%m-%d"), depth + 1)
+    left  = _fetch_range(s, sid, name, date_start,             mid_d.strftime("%Y-%m-%d"), depth + 1, post_code)
     time.sleep(0.25)
-    right = _fetch_range(s, sid, name, next_d.strftime("%Y-%m-%d"), date_end,              depth + 1)
+    right = _fetch_range(s, sid, name, next_d.strftime("%Y-%m-%d"), date_end,              depth + 1, post_code)
 
     # 合併並去重（同 id 只保留一筆）
     seen: set = set()
@@ -267,6 +285,7 @@ def fetch_subarea_by_months(
     sid: int,
     name: str,
     date_start: str,
+    post_code: str = "330",
 ) -> list[dict]:
     """以月份遍歷方式抓取生活圈所有交易資料。
     若某月超過 20 筆（API 上限），自動對半拆分確保不漏抓。
@@ -276,7 +295,7 @@ def fetch_subarea_by_months(
     all_records: list = []
 
     for d_start, d_end in ranges:
-        records = _fetch_range(s, sid, name, d_start, d_end)
+        records = _fetch_range(s, sid, name, d_start, d_end, post_code=post_code)
         if records:
             all_records.extend(records)
             log.info("  %-16s %s ~ %s  → %d 筆", name, d_start, d_end, len(records))
@@ -288,7 +307,7 @@ def fetch_subarea_by_months(
 # ── Main entry ───────────────────────────────────────────────────────────────
 
 def scrape() -> bool:
-    """主流程：取得 session → 爬所有生活圈 → 寫入 DB。"""
+    """主流程：遍歷桃園市所有行政區 → 爬各生活圈 → 寫入 DB。"""
     db.init_db()
 
     try:
@@ -299,43 +318,48 @@ def scrape() -> bool:
         db.log_scrape("error", msg)
         return False
 
-    try:
-        subareas = fetch_subareas(s)
-    except Exception as exc:
-        msg = f"取得生活圈失敗: {exc}"
-        log.error(msg)
-        db.log_scrape("error", msg)
-        return False
+    total_subareas = 0
+    total_records  = 0
 
-    if not subareas:
-        msg = f"找不到生活圈（post_code={POST_CODE}）"
-        log.error(msg)
-        db.log_scrape("error", msg)
-        return False
+    for district in TAOYUAN_DISTRICTS:
+        dist_name = district["name"]
+        post_code = district["post_code"]
+        log.info("=== 行政區：%s (post_code=%s) ===", dist_name, post_code)
 
-    log.info("找到 %d 個生活圈", len(subareas))
-    db.upsert_subareas(subareas)
+        try:
+            subareas = fetch_subareas(s, post_code)
+        except Exception as exc:
+            log.warning("取得 %s 生活圈失敗: %s，跳過", dist_name, exc)
+            continue
 
-    # --- 決定抓取起始日期（增量更新）---
-    last = db.get_last_scrape()
-    if last and last["status"] == "success" and last.get("scraped_at"):
-        # 增量更新：從上次成功日往前 30 天
-        prev       = datetime.fromisoformat(last["scraped_at"])
-        date_start = (prev - timedelta(days=30)).strftime("%Y-%m-%d")
-        log.info("增量更新，date_start=%s", date_start)
-    else:
-        date_start = FULL_SCRAPE_FROM
-        log.info("全量抓取，date_start=%s", date_start)
+        if not subareas:
+            log.info("%s 無生活圈資料，跳過", dist_name)
+            continue
 
-    # --- 月份遍歷抓取 ---
-    total_records = 0
-    for sa in subareas:
-        records = fetch_subarea_by_months(s, sa["sid"], sa["name"], date_start)
-        if records:
-            db.upsert_transactions(records)
-            total_records += len(records)
+        log.info("%s 找到 %d 個生活圈", dist_name, len(subareas))
+        db.upsert_subareas(subareas)
+        total_subareas += len(subareas)
 
-    msg = f"完成：{len(subareas)} 個生活圈，共 {total_records} 筆交易"
+        for sa in subareas:
+            # 各生活圈獨立判斷：有歷史資料→增量，無→全量
+            latest = db.get_subarea_latest_date(sa["sid"])
+            if latest:
+                date_start = (
+                    datetime.strptime(latest, "%Y-%m-%d") - timedelta(days=30)
+                ).strftime("%Y-%m-%d")
+                log.info("  %s 增量更新，從 %s 起", sa["name"], date_start)
+            else:
+                date_start = FULL_SCRAPE_FROM
+                log.info("  %s 首次全量抓取，從 %s 起", sa["name"], date_start)
+
+            records = fetch_subarea_by_months(s, sa["sid"], sa["name"], date_start, post_code)
+            if records:
+                db.upsert_transactions(records)
+                total_records += len(records)
+
+        time.sleep(1)  # 換區之間稍作停頓
+
+    msg = f"完成：{total_subareas} 個生活圈，共 {total_records} 筆交易"
     log.info("=== %s ===", msg)
     db.log_scrape("success", msg, total_records)
     return True
