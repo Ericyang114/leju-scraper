@@ -43,21 +43,19 @@ def read_local_db():
         SELECT id, sid, transaction_date, address, community,
                floor, total_floor, age, total_price, unit_price,
                total_area, house_area, parking_type, parking_price,
-               parking_area, floor_ratio, building_type,
-               is_special_trade, raw_data
+               parking_area, floor_ratio, building_type, is_special_trade
         FROM transactions
         ORDER BY transaction_date DESC
     """).fetchall()
+    transactions = [dict(r) for r in rows]
 
-    transactions = []
-    for r in rows:
-        d = dict(r)
-        raw_str = d.pop("raw_data", None)
-        try:
-            d["_raw"] = json.loads(raw_str) if raw_str else {}
-        except Exception:
-            d["_raw"] = {}
-        transactions.append(d)
+    # 讀取社區座標
+    try:
+        coords = [dict(r) for r in conn.execute(
+            "SELECT community, sid, lat, lon FROM community_coords WHERE lat IS NOT NULL AND lon IS NOT NULL"
+        )]
+    except Exception:
+        coords = []
 
     last = conn.execute(
         "SELECT status, message, records_count FROM scrape_log ORDER BY id DESC LIMIT 1"
@@ -65,7 +63,7 @@ def read_local_db():
     scrape_info = dict(last) if last else {}
 
     conn.close()
-    return subareas, transactions, scrape_info
+    return subareas, transactions, coords, scrape_info
 
 
 # ── 推送到 Render ─────────────────────────────────────────────────────────────
@@ -81,21 +79,29 @@ def push(payload: dict, label: str):
     log.info("%s → %s", label, resp.json())
 
 
-def push_all(subareas, transactions, scrape_info):
+def push_all(subareas, transactions, coords, scrape_info):
     # 1. 推送生活圈
-    push({"subareas": subareas, "transactions": [], "scrape_info": {}},
+    push({"subareas": subareas, "transactions": [], "community_coords": [], "scrape_info": {}},
          f"生活圈 {len(subareas)} 個")
 
     # 2. 分批推送交易
     total = len(transactions)
     for i in range(0, total, BATCH_SIZE):
         batch = transactions[i: i + BATCH_SIZE]
-        push({"subareas": [], "transactions": batch, "scrape_info": {}},
+        push({"subareas": [], "transactions": batch, "community_coords": [], "scrape_info": {}},
              f"交易 {i+1}–{min(i+BATCH_SIZE, total)}/{total}")
         time.sleep(0.5)
 
-    # 3. 更新爬取記錄
-    push({"subareas": [], "transactions": [], "scrape_info": scrape_info},
+    # 3. 推送社區座標
+    if coords:
+        for i in range(0, len(coords), 500):
+            batch = coords[i: i + 500]
+            push({"subareas": [], "transactions": [], "community_coords": batch, "scrape_info": {}},
+                 f"座標 {i+1}–{min(i+500, len(coords))}/{len(coords)}")
+            time.sleep(0.3)
+
+    # 4. 更新爬取記錄
+    push({"subareas": [], "transactions": [], "community_coords": [], "scrape_info": scrape_info},
          "scrape_log 更新")
 
 
@@ -119,12 +125,12 @@ def main():
 
     # Step 2: 讀取本機資料
     log.info("=== Step 2: 讀取本機資料 ===")
-    subareas, transactions, scrape_info = read_local_db()
-    log.info("生活圈 %d 個，交易 %d 筆", len(subareas), len(transactions))
+    subareas, transactions, coords, scrape_info = read_local_db()
+    log.info("生活圈 %d 個，交易 %d 筆，座標 %d 筆", len(subareas), len(transactions), len(coords))
 
     # Step 3: 推送到 Render
     log.info("=== Step 3: 推送到 %s ===", RENDER_URL)
-    push_all(subareas, transactions, scrape_info)
+    push_all(subareas, transactions, coords, scrape_info)
     log.info("=== 完成！資料已同步到網站 ===")
 
 

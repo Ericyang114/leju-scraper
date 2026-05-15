@@ -288,16 +288,20 @@ def api_push_data():
     payload  = request.get_json(force=True, silent=True) or {}
     subareas = payload.get("subareas", [])
     txs      = payload.get("transactions", [])
+    coords   = payload.get("community_coords", [])
     info     = payload.get("scrape_info", {})
 
     if subareas:
         db.upsert_subareas(subareas)
     if txs:
         db.upsert_transactions(txs)
+    if coords:
+        db.upsert_community_coords(coords)
     if info.get("status"):
         db.log_scrape(info["status"], info.get("message", ""), info.get("records_count", len(txs)))
 
-    return jsonify({"status": "ok", "subareas": len(subareas), "transactions": len(txs)})
+    return jsonify({"status": "ok", "subareas": len(subareas),
+                    "transactions": len(txs), "coords": len(coords)})
 
 
 @app.route("/healthz")
