@@ -306,6 +306,31 @@ def fetch_subarea_by_months(
 
 # ── Main entry ───────────────────────────────────────────────────────────────
 
+def _to_iso_date(raw: str | None) -> str | None:
+    """把各種日期格式統一轉成 ISO YYYY-MM-DD，無法解析回傳 None。
+    支援：
+      - ISO: 2026-03-15
+      - 民國年/月: 115/03  → 2026-03-01
+      - 民國年/月/日: 115/03/15 → 2026-03-15
+    """
+    import re
+    if not raw:
+        return None
+    # ISO
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", raw):
+        return raw
+    # 民國 YYY/MM/DD
+    m = re.match(r"^(\d{3})/(\d{2})/(\d{2})$", raw)
+    if m:
+        return f"{int(m.group(1))+1911}-{m.group(2)}-{m.group(3)}"
+    # 民國 YYY/MM
+    m = re.match(r"^(\d{3})/(\d{2})$", raw)
+    if m:
+        return f"{int(m.group(1))+1911}-{m.group(2)}-01"
+    log.warning("無法解析日期格式：%s，改為全量抓取", raw)
+    return None
+
+
 def scrape() -> bool:
     """主流程：遍歷桃園市所有行政區 → 爬各生活圈 → 寫入 DB。"""
     db.init_db()
@@ -343,9 +368,10 @@ def scrape() -> bool:
         for sa in subareas:
             # 各生活圈獨立判斷：有歷史資料→增量，無→全量
             latest = db.get_subarea_latest_date(sa["sid"])
-            if latest:
+            date_start = _to_iso_date(latest)
+            if date_start:
                 date_start = (
-                    datetime.strptime(latest, "%Y-%m-%d") - timedelta(days=30)
+                    datetime.strptime(date_start, "%Y-%m-%d") - timedelta(days=30)
                 ).strftime("%Y-%m-%d")
                 log.info("  %s 增量更新，從 %s 起", sa["name"], date_start)
             else:
