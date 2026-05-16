@@ -841,7 +841,7 @@ function pvRenderDistricts() {
           <div class="sa-name">${d.name}</div>
           <span class="badge-cnt">${subs.length} 生活圈</span>
         </div>
-        ${avg ? `<div class="sa-price">${avg}<span class="sa-pu"> 萬/坪</span></div>` : '<div class="sa-price" style="font-size:.85rem;color:var(--mute);">暫無均價</div>'}
+        ${avg ? `<div class="sa-price">${avg}<span class="sa-pu"> 萬/坪</span></div><div class="sa-range" style="font-size:.65rem;color:var(--mute);">近3年均價</div>` : '<div class="sa-price" style="font-size:.85rem;color:var(--mute);">暫無均價</div>'}
         <div class="sa-meta"><span>${totalTx.toLocaleString()} 筆</span><span style="color:var(--navy);font-weight:600;">查看 ›</span></div>
       </a></div>`;
     } else {
@@ -874,7 +874,7 @@ function pvShowSubareas(districtName, postCode) {
       </div>
       ${s.avg_unit_price
         ? `<div class="sa-price">${Number(s.avg_unit_price).toFixed(1)}<span class="sa-pu"> 萬/坪</span></div>
-           <div class="sa-range"><span style="color:#c0392b;">▲ ${s.max_unit_price}</span> &nbsp;<span style="color:#27ae60;">▼ ${s.min_unit_price}</span></div>`
+           <div class="sa-range"><span style="color:#c0392b;">▲ ${s.max_unit_price}</span> &nbsp;<span style="color:#27ae60;">▼ ${s.min_unit_price}</span> &nbsp;<span style="font-size:.63rem;color:var(--mute);">近3年均價</span></div>`
         : '<div class="sa-price" style="font-size:.85rem;color:var(--mute);">暫無資料</div>'}
       <div class="sa-meta"><span>最新：${s.latest_date||'—'}</span><span style="color:var(--navy);font-weight:600;">查看 ›</span></div>
     </a></div>`).join('')

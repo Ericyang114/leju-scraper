@@ -406,7 +406,7 @@ def get_subarea_latest_date(sid: int) -> str | None:
 
 
 def get_subarea_stats() -> list:
-    five_yr = _five_year_roc()
+    three_yr = _three_year_roc()
     with get_conn() as conn:
         return _rows(conn, f"""
             SELECT
@@ -429,7 +429,7 @@ def get_subarea_stats() -> list:
             LEFT JOIN transactions t ON s.sid = t.sid
             GROUP BY s.sid, s.name, s.post_code, s.updated_at
             ORDER BY avg_unit_price DESC NULLS LAST
-        """, (five_yr, five_yr, five_yr))
+        """, (three_yr, three_yr, three_yr))
 
 
 def _iso_to_roc_ym(iso_date: str) -> str:
