@@ -397,6 +397,46 @@ def get_subareas_by_post_code(post_code: str) -> list:
         """, (three_yr, three_yr, three_yr, post_code))
 
 
+def get_subarea_quarterly_trend(sid: int) -> list:
+    """回傳生活圈近5年每季均價走勢（排除特殊交易）。"""
+    five_yr = _five_year_roc()
+    with get_conn() as conn:
+        rows = _rows(conn, f"""
+            SELECT transaction_date, unit_price
+            FROM transactions
+            WHERE sid = {PH}
+              AND unit_price > 0
+              AND transaction_date >= {PH}
+              AND (is_special_trade IS NULL OR is_special_trade = 0)
+        """, (sid, five_yr))
+
+    from collections import defaultdict
+    buckets: dict = defaultdict(list)
+    for r in rows:
+        raw = (r.get("transaction_date") or "").strip()
+        parts = raw.replace("-", "/").split("/")
+        if len(parts) >= 2:
+            try:
+                roc_yr  = int(parts[0])
+                month   = int(parts[1])
+                year    = roc_yr + 1911 if roc_yr < 200 else roc_yr
+                quarter = (month - 1) // 3 + 1
+                buckets[(year, quarter)].append(float(r["unit_price"]))
+            except (ValueError, TypeError):
+                continue
+
+    result = []
+    for (year, q) in sorted(buckets.keys()):
+        prices = buckets[(year, q)]
+        if prices:
+            result.append({
+                "label": f"{year} Q{q}",
+                "avg":   round(sum(prices) / len(prices), 1),
+                "count": len(prices),
+            })
+    return result
+
+
 def get_subarea_latest_date(sid: int) -> str | None:
     """回傳某生活圈最新的交易日期，無資料則回傳 None。"""
     with get_conn() as conn:

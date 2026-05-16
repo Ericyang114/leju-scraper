@@ -157,6 +157,7 @@ def subarea(sid):
         sid, age_filter=age_filter, type_filter=type_filter,
         special_filter=special_filter, date_from=date_from, date_to=date_to,
     )
+    trend = db.get_subarea_quarterly_trend(sid)
 
     return render_template(
         "subarea.html",
@@ -173,6 +174,7 @@ def subarea(sid):
         date_to=date_to,
         bldg_types=bldg_types,
         filtered_stats=filtered_stats,
+        trend=trend,
     )
 
 
