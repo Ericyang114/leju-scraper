@@ -306,6 +306,65 @@ def api_push_data():
                     "transactions": len(txs), "coords": len(coords)})
 
 
+@app.route("/redevelopment")
+def redevelopment():
+    """桃園市重劃區行情總覽頁。"""
+    ZONES = [
+        # 機場捷運沿線
+        {"group": "機場捷運沿線重劃區", "sid": 11116, "name": "青埔 A18 高鐵生活圈",   "district": "大園區",
+         "desc": "桃園高鐵站核心商圈，鄰近 IKEA、好市多、台灣世界棒球訓練中心。捷運機場線直達台北車站約 30 分鐘，為桃園新興生活圈人氣最高的區域。"},
+        {"group": "機場捷運沿線重劃區", "sid": 11117, "name": "青埔 A17 領航站生活圈", "district": "大園區",
+         "desc": "鄰近 Xpark 水族館、桃園展演中心，規劃大型商業設施持續到位，居住機能日漸成熟。"},
+        {"group": "機場捷運沿線重劃區", "sid": 11115, "name": "青埔 A19 體育園區",    "district": "中壢區",
+         "desc": "桃園國家體育場、桃園市立圖書館總館坐落本區，為青埔南端新興發展重心，未來中壢延伸捷運線規劃中。"},
+        {"group": "機場捷運沿線重劃區", "sid": 11026, "name": "A10 山鼻重劃區",       "district": "蘆竹區",
+         "desc": "機場捷運 A10 站周邊，鄰近桃園國際機場，近年大量建案推出，為北桃園快速成長的住宅重劃區。"},
+        # A7 重劃區
+        {"group": "A7 站重劃區（龜山）", "sid": 11174, "name": "A7 文青國小區",        "district": "龜山區",
+         "desc": "A7 重劃區北側核心，文青非營利幼兒園及未來國小預定地，學區完整，為自住首選分區。"},
+        {"group": "A7 站重劃區（龜山）", "sid": 11173, "name": "A7 中心商業區",        "district": "龜山區",
+         "desc": "A7 捷運站正出口商業核心，規劃購物中心、辦公商業用地，是整個 A7 重劃區的商業發展重心。"},
+        {"group": "A7 站重劃區（龜山）", "sid": 11175, "name": "A7 郵政物流區",        "district": "龜山區",
+         "desc": "A7 南側住商混合區，鄰近中華郵政物流中心，住宅供給量大，成交筆數穩定。"},
+        {"group": "A7 站重劃區（龜山）", "sid": 11176, "name": "A7 樂善國小區",        "district": "龜山區",
+         "desc": "A7 西側住宅區，樂善非營利幼兒園及預定國小基地，生活圈規劃完整，近年交屋量大。"},
+        {"group": "A7 站重劃區（龜山）", "sid": 11177, "name": "A7 體育大學區",        "district": "龜山區",
+         "desc": "緊鄰國立體育大學，A7 重劃區外圍，房價相對親民，適合預算有限的首購族。"},
+        # 桃園市區重劃
+        {"group": "桃園市區重劃區",     "sid": 11017, "name": "中路重劃區",            "district": "桃園區",
+         "desc": "桃園市政中心旁，生活機能完整成熟，知名學區林立，為桃園市精華住宅區之一，長期保值性強。"},
+        {"group": "桃園市區重劃區",     "sid": 11019, "name": "小檜溪重劃區",          "district": "桃園區",
+         "desc": "鄰近桃園高鐵延伸計畫站點預定地，為桃園市近年推案量最大的新興重劃區，各大建商集中推案。"},
+        {"group": "桃園市區重劃區",     "sid": 10587, "name": "經國重劃區",            "district": "桃園區",
+         "desc": "緊鄰桃園市政府特區，生活機能成熟，學區優質，為桃園市中心近年持續穩定的住宅重劃區。"},
+        # 其他重劃區
+        {"group": "其他重劃區",         "sid": 11241, "name": "八德擴大重劃區",         "district": "八德區",
+         "desc": "八德市區最大規模都市重劃計畫，規劃完整住宅社區，鄰近台 66 線，交通便利，近年推案量持續增加。"},
+        {"group": "其他重劃區",         "sid": 11226, "name": "A20 興南重劃區",         "district": "中壢區",
+         "desc": "機場捷運 A20 站周邊，中壢區北端新興重劃區，均價為中壢最高，為近年中壢區人氣最旺的指標重劃區。"},
+        {"group": "其他重劃區",         "sid": 11596, "name": "桃園航空城",             "district": "大園區",
+         "desc": "國家重大建設計畫，規劃面積逾 3,100 公頃，配合桃園機場第三航廈擴建，預計帶動大量就業人口與住宅需求。"},
+        {"group": "其他重劃區",         "sid": 11029, "name": "過嶺重劃區",             "district": "觀音區",
+         "desc": "觀音區最具代表性的住宅重劃區，近年建設持續到位，房價親民，吸引首購族及換屋族進駐。"},
+        {"group": "其他重劃區",         "sid": 11237, "name": "草漯重劃區",             "district": "觀音區",
+         "desc": "觀音區北側重劃區，鄰近桃園工業區群，住宅供給穩定，為觀音區最大的住宅重劃開發區域。"},
+    ]
+
+    sids = [z["sid"] for z in ZONES]
+    stats_map = db.get_subareas_stats_by_sids(sids)
+
+    groups: dict = {}
+    for z in ZONES:
+        s = stats_map.get(z["sid"], {})
+        z["avg_unit_price"] = s.get("avg_unit_price")
+        z["tx_count"]       = s.get("tx_count", 0)
+        z["latest_date"]    = s.get("latest_date")
+        g = z["group"]
+        groups.setdefault(g, []).append(z)
+
+    return render_template("redevelopment.html", groups=groups)
+
+
 @app.route("/healthz")
 def healthz():
     """Render health check endpoint."""

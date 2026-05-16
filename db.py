@@ -437,6 +437,29 @@ def get_subarea_quarterly_trend(sid: int) -> list:
     return result
 
 
+def get_subareas_stats_by_sids(sids: list) -> dict:
+    """批次查詢多個 sid 的近3年均價統計，回傳 {sid: {...}} dict。"""
+    if not sids:
+        return {}
+    three_yr = _three_year_roc()
+    placeholders = ",".join([PH] * len(sids))
+    with get_conn() as conn:
+        rows = _rows(conn, f"""
+            SELECT
+                sid,
+                COUNT(*) AS tx_count,
+                ROUND(CAST(AVG(CASE WHEN unit_price > 0
+                               AND transaction_date >= {PH}
+                               AND (is_special_trade IS NULL OR is_special_trade=0)
+                               THEN unit_price END) AS NUMERIC), 1) AS avg_unit_price,
+                MAX(transaction_date) AS latest_date
+            FROM transactions
+            WHERE sid IN ({placeholders})
+            GROUP BY sid
+        """, [three_yr] + sids)
+    return {r["sid"]: dict(r) for r in rows}
+
+
 def get_subarea_latest_date(sid: int) -> str | None:
     """回傳某生活圈最新的交易日期，無資料則回傳 None。"""
     with get_conn() as conn:
