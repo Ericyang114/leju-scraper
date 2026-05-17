@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>看屋注意事項完整清單 · 老楊房快說</title>
+  <meta name="description" content="看屋前必做功課、現場20題必問清單、屋況修繕費用參考表，幫助你避開地雷屋，做出最正確的買房決策。">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy:  #0f2744;
+      --green: #1a7a56;
+      --gold:  #b8922a;
+      --red:   #c0392b;
+    }
+    body { background: #f0f2f5; font-family: 'Noto Sans TC', system-ui, sans-serif; }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, var(--navy) 0%, #1a4a7a 60%, #1e6ab0 100%);
+      color: #fff;
+      padding: 2.2rem 0 1.8rem;
+    }
+    .hero h1 { font-size: 1.5rem; font-weight: 700; }
+    .hero .sub { font-size: .85rem; opacity: .75; margin-top: .35rem; }
+    .hero .breadcrumb-item a { color: rgba(255,255,255,.7); }
+    .hero .breadcrumb-item.active { color: #fff; }
+    .hero .breadcrumb-item + .breadcrumb-item::before { color: rgba(255,255,255,.4); }
+
+    /* Section cards */
+    .section-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 1.5rem 1.6rem;
+      box-shadow: 0 1px 6px rgba(0,0,0,.07);
+      margin-bottom: 1.5rem;
+    }
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--navy);
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      margin-bottom: 1.1rem;
+      padding-bottom: .7rem;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    /* 看屋前功課 */
+    .prep-item {
+      display: flex;
+      align-items: flex-start;
+      gap: .9rem;
+      padding: .75rem 0;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .prep-item:last-child { border-bottom: none; }
+    .prep-num {
+      width: 28px; height: 28px;
+      background: var(--navy);
+      color: #fff;
+      border-radius: 50%;
+      font-size: .78rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .prep-content .prep-name { font-size: .87rem; font-weight: 600; color: #1a1a1a; }
+    .prep-content .prep-desc { font-size: .77rem; color: #666; line-height: 1.65; margin-top: .2rem; }
+
+    /* 必問題目 */
+    .q-group-title {
+      font-size: .75rem;
+      font-weight: 700;
+      color: #fff;
+      background: var(--green);
+      display: inline-block;
+      padding: .2rem .7rem;
+      border-radius: 20px;
+      margin: .8rem 0 .6rem;
+      letter-spacing: .03em;
+    }
+    .q-item {
+      display: flex;
+      align-items: flex-start;
+      gap: .7rem;
+      padding: .6rem 0;
+      border-bottom: 1px dashed #eee;
+    }
+    .q-item:last-child { border-bottom: none; }
+    .q-icon { font-size: 1.05rem; flex-shrink: 0; width: 22px; text-align: center; }
+    .q-text { font-size: .82rem; color: #333; line-height: 1.6; }
+    .q-tip  { font-size: .72rem; color: #e67e22; margin-top: .15rem; }
+
+    /* 費用表 */
+    .cost-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .cost-table thead th {
+      background: var(--navy);
+      color: #fff;
+      font-size: .75rem;
+      font-weight: 600;
+      padding: .55rem .9rem;
+    }
+    .cost-table thead th:first-child { border-radius: 8px 0 0 0; }
+    .cost-table thead th:last-child  { border-radius: 0 8px 0 0; }
+    .cost-table tbody td {
+      font-size: .82rem;
+      padding: .6rem .9rem;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+    }
+    .cost-table tbody tr:last-child td { border-bottom: none; }
+    .cost-table tbody tr:hover td { background: #f8faf9; }
+
+    .severity {
+      display: inline-block;
+      font-size: .68rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .sev-high { background: #fde8e8; color: var(--red); }
+    .sev-mid  { background: #fef3cd; color: #856404; }
+    .sev-low  { background: #e8f5e9; color: #2e7d32; }
+
+    /* 兩次看屋 */
+    .visit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media(max-width:576px){ .visit-grid { grid-template-columns: 1fr; } }
+    .visit-box {
+      border-radius: 10px;
+      padding: 1.1rem 1.2rem;
+    }
+    .visit-box.first { background: #e8f5ef; border-left: 4px solid var(--green); }
+    .visit-box.second { background: #fff8e1; border-left: 4px solid var(--gold); }
+    .visit-box .vb-title { font-size: .85rem; font-weight: 700; margin-bottom: .6rem; }
+    .visit-box .vb-item {
+      font-size: .78rem;
+      color: #444;
+      padding: .25rem 0;
+      display: flex;
+      align-items: flex-start;
+      gap: .4rem;
+      line-height: 1.55;
+    }
+
+    /* CTA */
+    .cta-box {
+      background: linear-gradient(135deg, var(--navy), #1a4a7a);
+      border-radius: 14px;
+      padding: 1.5rem 1.8rem;
+      color: #fff;
+      text-align: center;
+    }
+    .cta-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: .4rem; }
+    .cta-box p  { font-size: .82rem; opacity: .8; margin-bottom: 1rem; }
+    .btn-line {
+      display: inline-block;
+      background: #06c755;
+      color: #fff;
+      font-size: .85rem;
+      font-weight: 700;
+      padding: .55rem 1.6rem;
+      border-radius: 30px;
+      text-decoration: none;
+      margin: .3rem;
+    }
+    .btn-tel {
+      display: inline-block;
+      background: var(--gold);
+      color: #fff;
+      font-size: .85rem;
+      font-weight: 700;
+      padding: .55rem 1.6rem;
+      border-radius: 30px;
+      text-decoration: none;
+      margin: .3rem;
+    }
+
+    .disclaimer {
+      font-size: .68rem;
+      color: #999;
+      line-height: 1.7;
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: .7rem 1rem;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="container">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-2" style="font-size:.8rem;">
+        <li class="breadcrumb-item"><a href="/">回首頁</a></li>
+        <li class="breadcrumb-item active">看屋注意事項</li>
+      </ol>
+    </nav>
+    <h1>🔍 看屋注意事項完整清單</h1>
+    <p class="sub">從看屋前功課、現場必問題目到修繕費用估算，幫你避開地雷屋</p>
+  </div>
+</div>
+
+<div class="container py-4">
+
+  <!-- ① 看屋前必做功課 -->
+  <div class="section-card">
+    <div class="section-title">📋 看屋前必做的 5 件功課</div>
+
+    <div class="prep-item">
+      <div class="prep-num">1</div>
+      <div class="prep-content">
+        <div class="prep-name">查實價登錄 + 掛牌時間</div>
+        <div class="prep-desc">上內政部實價登錄查詢同社區近1–2年成交價，掌握合理行情。掛牌超過 3 個月的物件，通常有較大的議價空間。</div>
+      </div>
+    </div>
+
+    <div class="prep-item">
+      <div class="prep-num">2</div>
+      <div class="prep-content">
+        <div class="prep-name">查地籍謄本</div>
+        <div class="prep-desc">至地政事務所或線上申請，確認屋主是否與賣方一致、有無抵押設定或查封情形，避免產權糾紛。費用約 20–40 元。</div>
+      </div>
+    </div>
+
+    <div class="prep-item">
+      <div class="prep-num">3</div>
+      <div class="prep-content">
+        <div class="prep-name">了解銀行估價</div>
+        <div class="prep-desc">可請銀行貸款部門預估房屋鑑價，避免掛牌價虛高導致貸款不足額，出現資金缺口。</div>
+      </div>
+    </div>
+
+    <div class="prep-item">
+      <div class="prep-num">4</div>
+      <div class="prep-content">
+        <div class="prep-name">研究周邊未來建設</div>
+        <div class="prep-desc">查詢桃園市政府都市計畫、捷運路線規劃、重劃區開發進度，了解區域未來發展潛力與可能的嫌惡設施。</div>
+      </div>
+    </div>
+
+    <div class="prep-item">
+      <div class="prep-num">5</div>
+      <div class="prep-content">
+        <div class="prep-name">確認嫌惡設施位置</div>
+        <div class="prep-desc">用 Google Maps 確認周邊是否有殯儀館、垃圾場、高壓電塔、加油站、噪音來源等，這些會影響日後轉售價格。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 現場必問題目 -->
+  <div class="section-card">
+    <div class="section-title">❓ 現場必問 20 題</div>
+    <p style="font-size:.78rem; color:#888; margin-bottom:.5rem;">第一次看屋：蒐集資訊，不要表態喜好。第二次看屋：帶清單確認屋況，準備議價。</p>
+
+    <!-- 仲介相關 -->
+    <div class="q-group-title">🏢 仲介與市場相關（4題）</div>
+    <div class="q-item">
+      <div class="q-icon">📅</div>
+      <div>
+        <div class="q-text">這間屋子掛牌多久了？有沒有降過價？</div>
+        <div class="q-tip">掛牌超過90天且降過價，議價空間通常較大</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">🎯</div>
+      <div>
+        <div class="q-text">屋主賣房的原因是什麼？有急售需求嗎？</div>
+        <div class="q-tip">了解屋主動機是判斷議價空間的關鍵</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">🏠</div>
+      <div>
+        <div class="q-text">這附近還有哪些類似物件在售？</div>
+        <div class="q-tip">掌握競品情況，避免買貴</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">📦</div>
+      <div>
+        <div class="q-text">屋主何時可以交屋？有無附帶家具家電？</div>
+        <div class="q-tip">交屋時間可作為議價籌碼之一</div>
+      </div>
+    </div>
+
+    <!-- 屋況相關 -->
+    <div class="q-group-title">🔧 屋況檢查相關（10題）</div>
+    <div class="q-item">
+      <div class="q-icon">💧</div>
+      <div>
+        <div class="q-text">水壓夠嗎？各樓層的水壓是否一致？</div>
+        <div class="q-tip">低樓層、頂樓特別需要確認；水壓不足會影響日常使用</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">🚽</div>
+      <div>
+        <div class="q-text">廁所排水速度如何？糞管有沒有改過？</div>
+        <div class="q-tip">糞管改裝費用高達 10–20 萬，是重要的議價籌碼</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">🌧️</div>
+      <div>
+        <div class="q-text">有沒有漏水、壁癌或滲水的痕跡？</div>
+        <div class="q-tip">仔細看天花板角落、牆角、窗框周圍</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">⚡</div>
+      <div>
+        <div class="q-text">電線是幾年前配的？有沒有更新過？</div>
+        <div class="q-tip">超過 20 年未更新的電路存在安全風險，更新費用 10–30 萬</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">🏗️</div>
+      <div>
+        <div class="q-text">格局有沒有變更過？有無打掉牆壁或加蓋？</div>
+        <div class="q-tip">未申報的格局變更可能涉及違建，影響貸款與安全</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">🪟</div>
+      <div>
+        <div class="q-text">窗戶、門框有無變形？開關是否順暢？</div>
+        <div class="q-tip">變形可能是地基下陷或結構問題的徵兆</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">🌡️</div>
+      <div>
+        <div class="q-text">頂樓或最高層住戶，隔熱情況如何？</div>
+        <div class="q-tip">隔熱不良會大幅提高夏季冷氣費用</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">🔩</div>
+      <div>
+        <div class="q-text">有無附停車位？機械車位還是平面？</div>
+        <div class="q-tip">機械車位故障維修費高，轉售時較難賣</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">🐛</div>
+      <div>
+        <div class="q-text">有無白蟻或蟲害問題？</div>
+        <div class="q-tip">木作裝潢、木地板特別容易有白蟻，處理費 3–10 萬</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">📐</div>
+      <div>
+        <div class="q-text">實際使用面積與權狀面積是否符合？公設比多少？</div>
+        <div class="q-tip">公設比超過 35% 代表室內實際空間較小</div>
+      </div>
+    </div>
+
+    <!-- 社區環境 -->
+    <div class="q-group-title">🏘️ 社區與環境相關（6題）</div>
+    <div class="q-item">
+      <div class="q-icon">🅿️</div>
+      <div>
+        <div class="q-text">訪客停車是否方便？周邊違停情況嚴重嗎？</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">🔧</div>
+      <div>
+        <div class="q-text">管委會是否健全？管理費多少？有無積欠維修費？</div>
+        <div class="q-tip">管委會功能差的社區，公共設施維護會出現問題</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">👥</div>
+      <div>
+        <div class="q-text">鄰居住戶組成如何？有無問題住戶或租客多？</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">🚧</div>
+      <div>
+        <div class="q-text">周邊近期有無大型工程、道路拓寬或新建計畫？</div>
+        <div class="q-tip">工程噪音可能持續數年，影響居住品質</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">⚰️</div>
+      <div>
+        <div class="q-text">這間房有無凶宅紀錄？</div>
+        <div class="q-tip">可至「凶宅網」查詢，或要求仲介書面聲明</div>
+      </div>
+    </div>
+    <div class="q-item">
+      <div class="q-icon">📡</div>
+      <div>
+        <div class="q-text">附近有無高壓電塔、基地台、特殊設施？</div>
+        <div class="q-tip">對部分買家心理影響較大，日後轉售時需注意</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 修繕費用參考表 -->
+  <div class="section-card">
+    <div class="section-title">💰 屋況修繕費用參考表</div>
+    <p style="font-size:.78rem; color:#888; margin-bottom:1rem;">發現屋況問題時可作為議價依據，以下為市場行情參考範圍（實際費用依施工廠商及規模而定）</p>
+
+    <div class="table-responsive">
+      <table class="cost-table">
+        <thead>
+          <tr>
+            <th>項目</th>
+            <th>估算範圍</th>
+            <th>嚴重程度</th>
+            <th>備註</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>🌧️ 漏水處理</td>
+            <td><strong>5–50 萬</strong></td>
+            <td><span class="severity sev-high">高風險</span></td>
+            <td>頂樓、外牆漏水費用偏高；需找出根源</td>
+          </tr>
+          <tr>
+            <td>🌿 壁癌整治</td>
+            <td><strong>3–30 萬</strong></td>
+            <td><span class="severity sev-high">高風險</span></td>
+            <td>需連同防水一起處理，否則易復發</td>
+          </tr>
+          <tr>
+            <td>⚡ 電路全面更新</td>
+            <td><strong>10–30 萬</strong></td>
+            <td><span class="severity sev-high">高風險</span></td>
+            <td>超過 20 年老屋建議全面更新，安全優先</td>
+          </tr>
+          <tr>
+            <td>🚽 糞管更換</td>
+            <td><strong>10–20 萬</strong></td>
+            <td><span class="severity sev-high">高風險</span></td>
+            <td>低樓層舊公寓特別需要確認</td>
+          </tr>
+          <tr>
+            <td>🛁 浴室翻新</td>
+            <td><strong>10–30 萬</strong></td>
+            <td><span class="severity sev-mid">中等</span></td>
+            <td>含防水、磁磚、設備更換</td>
+          </tr>
+          <tr>
+            <td>🍳 廚房翻新</td>
+            <td><strong>15–40 萬</strong></td>
+            <td><span class="severity sev-mid">中等</span></td>
+            <td>含系統廚具、廚房設備</td>
+          </tr>
+          <tr>
+            <td>🪵 地板更換</td>
+            <td><strong>5–20 萬</strong></td>
+            <td><span class="severity sev-low">較輕</span></td>
+            <td>依面積與材質（海島型木地板 vs 磁磚）</td>
+          </tr>
+          <tr>
+            <td>🎨 全室油漆</td>
+            <td><strong>3–10 萬</strong></td>
+            <td><span class="severity sev-low">較輕</span></td>
+            <td>基本改善居住觀感，費用相對低</td>
+          </tr>
+          <tr>
+            <td>🐛 白蟻防治</td>
+            <td><strong>3–10 萬</strong></td>
+            <td><span class="severity sev-mid">中等</span></td>
+            <td>木作裝潢、架高地板需特別注意</td>
+          </tr>
+          <tr>
+            <td>🔩 門窗更換</td>
+            <td><strong>5–20 萬</strong></td>
+            <td><span class="severity sev-low">較輕</span></td>
+            <td>鋁窗、氣密窗、防盜門等</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:.72rem; color:#aaa; margin-top:.8rem;">＊ 以上費用為市場參考範圍，實際金額依屋況、施工廠商及材料等級而異。建議看屋後請專業師傅現場估價。</p>
+  </div>
+
+  <!-- ④ 兩次看屋策略 -->
+  <div class="section-card">
+    <div class="section-title">🗓️ 兩次看屋的策略差異</div>
+    <div class="visit-grid">
+      <div class="visit-box first">
+        <div class="vb-title">🟢 第一次看屋：資訊蒐集</div>
+        <div class="vb-item"><span>✓</span>態度冷靜客觀，不表態喜好</div>
+        <div class="vb-item"><span>✓</span>詢問掛牌時間、屋主動機</div>
+        <div class="vb-item"><span>✓</span>觀察採光、通風、格局動線</div>
+        <div class="vb-item"><span>✓</span>記錄屋況疑問，回家查資料</div>
+        <div class="vb-item"><span>✓</span>不要當場表示「這間不錯」</div>
+        <div class="vb-item"><span>✓</span>拍照記錄各空間狀況</div>
+      </div>
+      <div class="visit-box second">
+        <div class="vb-title">🟡 第二次看屋：確認議價籌碼</div>
+        <div class="vb-item"><span>✓</span>帶屋況清單逐項確認</div>
+        <div class="vb-item"><span>✓</span>請師傅同行估算修繕費用</div>
+        <div class="vb-item"><span>✓</span>確認社區管委會財務狀況</div>
+        <div class="vb-item"><span>✓</span>詢問管理費、停車費細節</div>
+        <div class="vb-item"><span>✓</span>將屋況問題轉化為議價數字</div>
+        <div class="vb-item"><span>✓</span>確認交屋時間與附贈條件</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-box">
+    <h3>🏠 想找人陪你看屋、幫你把關屋況？</h3>
+    <p>老楊深耕桃園房市多年，從看屋、議價到交屋，全程協助你避開地雷</p>
+    <a class="btn-line" href="https://line.me/ti/p/~@yanghousetalk" target="_blank">💬 加 LINE 免費諮詢</a>
+    <a class="btn-tel" href="tel:0935195944">📞 0935-195-944</a>
+  </div>
+
+  <div class="disclaimer mt-3">
+    ⚠ 本頁面修繕費用資料為市場參考範圍，實際金額依各案屋況與施工廠商而定，建議請專業人員現場估價後再作判斷。本內容僅供購屋參考，不構成法律或財務建議。
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

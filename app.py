@@ -389,6 +389,12 @@ def api_push_data():
                     "transactions": len(txs), "coords": len(coords)})
 
 
+@app.route("/inspection")
+def inspection():
+    """看屋注意事項頁。"""
+    return render_template("inspection.html")
+
+
 @app.route("/redevelopment")
 def redevelopment():
     """桃園市重劃區行情總覽頁。"""
