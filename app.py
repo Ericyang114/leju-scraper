@@ -78,6 +78,15 @@ TAOYUAN_DISTRICTS = [
 
 _POST_CODE_MAP = {d["post_code"]: d["name"] for d in TAOYUAN_DISTRICTS}
 
+DISTRICT_INFO = {
+    "桃園區": {
+        "intro": "桃園區是桃園市的行政與商業核心，擁有桃園市政府、桃園火車站及完整的商業機能。近年來中路、小檜溪、經國等重劃區快速發展，吸引大量新建案進駐，為桃園市推案量最大的行政區。",
+        "traffic": "台鐵桃園站提供北上台北（約 25 分鐘）、南下中壢的便利交通；台 1 線、台 4 線及台 66 線快速道路貫穿全區；機場捷運桃園站可直達桃園國際機場及台北車站。捷運綠線（中壢延伸線）預計經過本區，串聯高鐵桃園站。",
+        "school": "明星學區包含武陵高中、桃園高中、桃園女中、東安國中等，學區資源完整，為桃園市家長購屋首選行政區之一。",
+        "life": "桃園統領百貨、大廟口商圈、中正藝文特區、桃園展演中心等生活休閒設施完備；大型量販店、連鎖餐飲集中，日常生活機能成熟。",
+    },
+}
+
 
 # ── 路由 ──────────────────────────────────────────────────────────────────────
 
@@ -114,9 +123,11 @@ def price_district(district_name):
     if not d:
         return "找不到該行政區", 404
     stats = db.get_subareas_by_post_code(d["post_code"])
+    info  = DISTRICT_INFO.get(district_name)
     return render_template("district.html",
                            district_name=district_name,
-                           stats=stats)
+                           stats=stats,
+                           info=info)
 
 
 @app.route("/dashboard")

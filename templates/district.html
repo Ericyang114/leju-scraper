@@ -50,6 +50,50 @@
       border-radius: 20px;
       padding: 2px 9px;
     }
+
+    .info-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.3rem 1.5rem;
+      box-shadow: 0 1px 6px rgba(0,0,0,.07);
+      margin-bottom: 1.5rem;
+    }
+    .info-card h2 {
+      font-size: .95rem;
+      font-weight: 700;
+      color: #1a3a2a;
+      margin-bottom: .7rem;
+    }
+    .info-intro {
+      font-size: .83rem;
+      color: #444;
+      line-height: 1.8;
+      margin-bottom: 1rem;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: .8rem;
+    }
+    .info-block {
+      background: #f8faf9;
+      border-radius: 8px;
+      padding: .75rem 1rem;
+      border-left: 3px solid #1a7a56;
+    }
+    .info-block .info-label {
+      font-size: .68rem;
+      font-weight: 700;
+      color: #1a7a56;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: .3rem;
+    }
+    .info-block .info-text {
+      font-size: .78rem;
+      color: #555;
+      line-height: 1.7;
+    }
   </style>
 </head>
 <body>
@@ -79,6 +123,34 @@
 </div>
 
 <div class="container py-4">
+
+  {% if info %}
+  <div class="info-card">
+    <h2>🏙 {{ district_name }}區域介紹</h2>
+    <p class="info-intro">{{ info.intro }}</p>
+    <div class="info-grid">
+      {% if info.traffic %}
+      <div class="info-block">
+        <div class="info-label">🚇 交通</div>
+        <div class="info-text">{{ info.traffic }}</div>
+      </div>
+      {% endif %}
+      {% if info.school %}
+      <div class="info-block">
+        <div class="info-label">🏫 學區</div>
+        <div class="info-text">{{ info.school }}</div>
+      </div>
+      {% endif %}
+      {% if info.life %}
+      <div class="info-block">
+        <div class="info-label">🛒 生活機能</div>
+        <div class="info-text">{{ info.life }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
   {% if stats %}
   <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-3">
     {% for s in stats %}
