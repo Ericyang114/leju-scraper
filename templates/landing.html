@@ -197,6 +197,7 @@
     <button class="tab-btn" onclick="switchTab('mortgage',this)">🏦 房貸試算</button>
     <button class="tab-btn" onclick="switchTab('afford',this)">🏠 購屋能力</button>
     <button class="tab-btn row2" onclick="switchTab('land',this)">🏛️ 房地合一</button>
+    <button class="tab-btn row2" onclick="switchTab('landval',this)">📈 土地增值稅</button>
     <button class="tab-btn row2" onclick="switchTab('fees',this)">🧾 買賣雜費</button>
     <button class="tab-btn row2" onclick="switchTab('calc',this)">📐 換算工具</button>
     <button class="tab-btn row2" onclick="switchTab('life',this)">🗺️ 生活機能</button>
@@ -262,6 +263,60 @@
       <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2" id="pv-subarea-grid"></div>
     </div>
 
+  </div>
+
+  <!-- ===== 土地增值稅 ===== -->
+  <div class="panel calc-panel" id="panel-landval">
+    <div class="calc-card">
+      <h2>📈 土地增值稅試算</h2>
+      <div class="info-box mb-3">
+        依《土地稅法》，土地移轉時按「漲價總數額」課徵土地增值稅。前次移轉現值須以台灣地區消費者物價指數（主計總處，基期民國110年=100）調整後計算。<br>
+        <b>⚠ 本試算僅供參考，實際稅額請洽地政事務所或稅捐稽徵處確認。</b>
+      </div>
+
+      <div class="row g-3">
+        <!-- 取得年度 -->
+        <div class="col-6">
+          <label class="form-label-sm">取得（買入）年度 <span style="color:#999;font-size:.7rem;">民國年</span></label>
+          <select id="lv_buy_yr" class="form-control form-control-sm" onchange="lvCalc()">
+          </select>
+        </div>
+        <!-- 移轉年度 -->
+        <div class="col-6">
+          <label class="form-label-sm">移轉（賣出）年度 <span style="color:#999;font-size:.7rem;">民國年</span></label>
+          <select id="lv_sell_yr" class="form-control form-control-sm" onchange="lvCalc()">
+          </select>
+        </div>
+        <!-- 前次移轉現值 -->
+        <div class="col-6">
+          <label class="form-label-sm">前次移轉現值（萬元）</label>
+          <input type="number" id="lv_prev" class="form-control form-control-sm" placeholder="例：300" oninput="lvCalc()">
+          <div style="font-size:.68rem;color:#999;margin-top:.2rem;">取得時的公告土地現值×持分面積</div>
+        </div>
+        <!-- 申報移轉現值 -->
+        <div class="col-6">
+          <label class="form-label-sm">申報移轉現值（萬元）</label>
+          <input type="number" id="lv_curr" class="form-control form-control-sm" placeholder="例：800" oninput="lvCalc()">
+          <div style="font-size:.68rem;color:#999;margin-top:.2rem;">本次公告土地現值×持分面積</div>
+        </div>
+        <!-- 改良土地費用 -->
+        <div class="col-6">
+          <label class="form-label-sm">改良土地費用（萬元）<span style="color:#999;font-size:.7rem;">可選</span></label>
+          <input type="number" id="lv_improve" class="form-control form-control-sm" placeholder="0" value="0" oninput="lvCalc()">
+        </div>
+        <!-- 用途 -->
+        <div class="col-6">
+          <label class="form-label-sm">用途</label>
+          <div class="d-flex gap-2 mt-1">
+            <button id="lv_btn_general" class="toggle-btn active" onclick="lvSetType('general')">一般用地</button>
+            <button id="lv_btn_self" class="toggle-btn" onclick="lvSetType('self')">自用住宅<br><span style="font-size:.65rem;font-weight:400;">（一生一次）</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 結果 -->
+      <div id="lv_result" style="margin-top:1.2rem;"></div>
+    </div>
   </div>
 
   <!-- ===== 房地合一稅 ===== -->
@@ -697,6 +752,123 @@ function switchTab(name, btn) {
   btn.classList.add('active');
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
+}
+
+// ── 土地增值稅 ──
+const _LV_CPI = {
+  48:10.57,49:12.53,50:13.51,51:13.83,52:14.13,53:14.11,54:14.1,55:14.38,
+  56:14.87,57:16.04,58:16.86,59:17.46,60:17.94,61:18.48,62:19.99,63:29.48,
+  64:31.02,65:31.8,66:34.03,67:36.0,68:39.51,69:47.02,70:54.7,71:56.32,
+  72:57.09,73:57.07,74:56.98,75:57.38,76:57.67,77:58.41,78:60.99,79:63.51,
+  80:65.81,81:68.75,82:70.77,83:73.67,84:76.37,85:78.72,86:79.43,87:80.77,
+  88:80.91,89:81.92,90:81.92,91:81.76,92:81.53,93:82.84,94:84.75,95:85.26,
+  96:86.79,97:89.86,98:89.07,99:89.93,100:91.21,101:92.97,102:93.71,
+  103:94.83,104:94.54,105:95.86,106:96.45,107:97.76,108:98.3,109:98.07,
+  110:100.0,111:102.95,112:105.51,113:107.81,114:109.6,115:110.68
+};
+// 民國115年為截至目前月份的累計平均，會持續更新
+
+let _lvType = 'general'; // 'general' | 'self'
+
+function lvSetType(t) {
+  _lvType = t;
+  document.getElementById('lv_btn_general').classList.toggle('active', t === 'general');
+  document.getElementById('lv_btn_self').classList.toggle('active', t === 'self');
+  lvCalc();
+}
+
+// 初始化年度下拉
+(function lvInitYears() {
+  const yrs = Object.keys(_LV_CPI).map(Number).sort((a,b)=>a-b);
+  const curYr = 115; // 民國115年
+  ['lv_buy_yr','lv_sell_yr'].forEach(id => {
+    const sel = document.getElementById(id);
+    yrs.forEach(y => {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = `民國 ${y} 年`;
+      if (y === curYr) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  });
+  // 預設取得年度為民國100年
+  document.getElementById('lv_buy_yr').value = 100;
+})();
+
+function lvCalc() {
+  const buyYr  = parseInt(document.getElementById('lv_buy_yr').value);
+  const sellYr = parseInt(document.getElementById('lv_sell_yr').value);
+  const prev   = parseFloat(document.getElementById('lv_prev').value) || 0;
+  const curr   = parseFloat(document.getElementById('lv_curr').value) || 0;
+  const impr   = parseFloat(document.getElementById('lv_improve').value) || 0;
+  const box    = document.getElementById('lv_result');
+
+  if (!prev || !curr) { box.innerHTML = ''; return; }
+  if (buyYr >= sellYr) {
+    box.innerHTML = `<div style="color:#c0392b;font-size:.8rem;">⚠ 移轉年度須大於取得年度</div>`;
+    return;
+  }
+
+  const cpiAdj   = _LV_CPI[sellYr] / _LV_CPI[buyYr];
+  const adjPrev  = prev * cpiAdj;               // 調整後前次現值
+  const gain     = curr - adjPrev - impr;        // 漲價總數額
+  const partNote = sellYr === 115 ? '（民國115年為截至目前月份累計平均，非完整年度）' : '';
+
+  if (gain <= 0) {
+    box.innerHTML = `
+      <div class="result-card">
+        <div style="font-size:.75rem;color:var(--mute);margin-bottom:.6rem;">
+          CPI調整係數：${cpiAdj.toFixed(4)}（${buyYr}年→${sellYr}年）${partNote}
+        </div>
+        <div style="color:#27ae60;font-weight:700;font-size:1rem;">無漲價，免徵土地增值稅</div>
+        <div style="font-size:.75rem;color:var(--mute);margin-top:.4rem;">
+          調整後前次現值：${adjPrev.toFixed(1)} 萬 ≥ 申報現值 ${curr} 萬
+        </div>
+      </div>`;
+    return;
+  }
+
+  let tax = 0, detail = '';
+  if (_lvType === 'self') {
+    tax = gain * 0.10;
+    detail = `<div class="result-row"><span>漲價總數額 × 10%（自用住宅優惠）</span><span>${gain.toFixed(1)} × 10% = <b>${tax.toFixed(1)}</b> 萬</span></div>`;
+  } else {
+    // 累進稅率
+    const b = adjPrev; // 基數
+    let remain = gain, t = 0;
+    const seg = [];
+    // 第一段：漲幅 0~100%（≤ b）
+    const s1 = Math.min(remain, b);
+    if (s1 > 0) { t += s1*0.20; seg.push(`${s1.toFixed(1)}萬×20%=${( s1*0.20).toFixed(1)}萬`); remain -= s1; }
+    // 第二段：漲幅 100~200%
+    const s2 = Math.min(remain, b);
+    if (s2 > 0) { t += s2*0.30; seg.push(`${s2.toFixed(1)}萬×30%=${( s2*0.30).toFixed(1)}萬`); remain -= s2; }
+    // 第三段：漲幅 > 200%
+    if (remain > 0) { t += remain*0.40; seg.push(`${remain.toFixed(1)}萬×40%=${( remain*0.40).toFixed(1)}萬`); }
+    tax = t;
+    detail = seg.map(s=>`<div class="result-row" style="font-size:.78rem;"><span>${s}</span></div>`).join('');
+  }
+
+  box.innerHTML = `
+    <div class="result-card">
+      <div style="font-size:.75rem;color:var(--mute);margin-bottom:.8rem;">
+        CPI調整係數：<b>${cpiAdj.toFixed(4)}</b>（民國${buyYr}年 CPI ${_LV_CPI[buyYr]} → 民國${sellYr}年 CPI ${_LV_CPI[sellYr]}）${partNote}
+      </div>
+      <div class="result-row"><span>調整後前次移轉現值</span><span style="color:var(--navy);">${prev.toFixed(1)} × ${cpiAdj.toFixed(4)} = <b>${adjPrev.toFixed(1)} 萬</b></span></div>
+      <div class="result-row"><span>漲價總數額</span><span style="color:var(--navy);"><b>${gain.toFixed(1)} 萬</b>${impr>0?` （已扣除改良費 ${impr}萬）`:''}</span></div>
+      <hr style="margin:.6rem 0;border-color:#eee;">
+      <div style="font-size:.75rem;color:var(--mute);margin-bottom:.4rem;">稅額明細（${_lvType==='self'?'自用住宅10%':'一般累進稅率'}）：</div>
+      ${detail}
+      <hr style="margin:.6rem 0;border-color:#eee;">
+      <div class="result-row" style="font-size:1rem;">
+        <span><b>應繳土地增值稅</b></span>
+        <span style="color:#c0392b;font-size:1.3rem;font-weight:700;">${tax.toFixed(1)} 萬</span>
+      </div>
+      <div class="result-row" style="font-size:.8rem;margin-top:.3rem;">
+        <span>賣地實得（申報現值−稅額）</span>
+        <span style="color:#27ae60;font-weight:700;">${(curr - tax).toFixed(1)} 萬</span>
+      </div>
+    </div>`;
 }
 
 // ── 房地合一稅 ──
