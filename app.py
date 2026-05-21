@@ -5,6 +5,7 @@ import logging
 import math
 import os
 import threading
+import time
 from datetime import date, datetime
 
 from flask import Flask, jsonify, redirect, render_template, request, url_for
@@ -17,6 +18,23 @@ log = logging.getLogger(__name__)
 
 app = Flask(__name__)
 db.init_db()
+
+# ── 簡易 TTL 快取（避免每次請求都重算重度 SQL）─────────────────────────────
+_cache: dict = {}
+_CACHE_TTL = 300  # 5 分鐘
+
+def _cached(key: str, fn, *args, **kwargs):
+    """若 key 存在且未過期則回傳快取，否則執行 fn 並存入快取。"""
+    entry = _cache.get(key)
+    if entry and time.time() - entry["ts"] < _CACHE_TTL:
+        return entry["val"]
+    val = fn(*args, **kwargs)
+    _cache[key] = {"val": val, "ts": time.time()}
+    return val
+
+def _invalidate_cache():
+    """資料更新後清除快取。"""
+    _cache.clear()
 
 # ── 排程 ──────────────────────────────────────────────────────────────────────
 
@@ -33,6 +51,7 @@ def _run_scrape():
         scrape()
     finally:
         _scrape_running = False
+        _invalidate_cache()   # 資料更新後清除快取
 
 
 def _needs_today_scrape() -> bool:
@@ -177,15 +196,15 @@ NTPC_DISTRICT_INFO = {
 
 @app.route("/")
 def landing():
-    stats = db.get_subarea_stats()
-    last  = db.get_last_scrape()
+    stats = _cached("subarea_stats", db.get_subarea_stats)
+    last  = _cached("last_scrape",   db.get_last_scrape)
     return render_template("landing.html", stats=stats, last_scrape=last)
 
 
 @app.route("/price")
 def price_districts():
     """桃園市各行政區選擇頁。"""
-    district_stats = {r["post_code"]: r for r in db.get_district_stats()}
+    district_stats = {r["post_code"]: r for r in _cached("district_stats", db.get_district_stats)}
     districts = []
     for d in TAOYUAN_DISTRICTS:
         stat = district_stats.get(d["post_code"], {})
@@ -412,6 +431,8 @@ def api_push_data():
         db.upsert_community_coords(coords)
     if info.get("status"):
         db.log_scrape(info["status"], info.get("message", ""), info.get("records_count", len(txs)))
+    if subareas or txs:
+        _invalidate_cache()   # 新資料推入後清除快取
 
     return jsonify({"status": "ok", "subareas": len(subareas),
                     "transactions": len(txs), "coords": len(coords)})
