@@ -423,7 +423,7 @@
   <div class="panel calc-panel" id="panel-estimate">
     <div class="calc-card">
       <h2>🏷️ 房價行情落點試算</h2>
-      <div class="info-box mb-3">根據近5年內政部實價登錄公開資料，扣除車位後進行統計學上之區間推估，並以 IQR 統計法自動剔除離群值，排除特殊交易。<br><b>⚠ 本功能為市場行情統計參考，並非《不動產估價師法》所稱之估價報告書，不得作為融資、訴訟、稅務申報之依據。</b></div>
+      <div class="info-box mb-3">根據近2年內政部實價登錄公開資料，扣除車位後進行統計學上之區間推估，並以 IQR 統計法自動剔除離群值、排除特殊交易；無同社區成交時自動參考同生活圈周遭行情。<br><b>⚠ 本功能為市場行情統計參考，並非《不動產估價師法》所稱之估價報告書，不得作為融資、訴訟、稅務申報之依據。</b></div>
 
       <!-- 社區自動完成 -->
       <div class="mb-3" style="position:relative;">
@@ -1041,9 +1041,11 @@ async function doEstimate() {
     const res  = await fetch(url);
     const d    = await res.json();
 
-    if (!d || !d.tx_count || d.tx_count === 0) {
+    const hasCommunity = d && d.tx_count > 0;
+    const hasNearby    = d && d.tx_nearby > 0;
+    if (!d || !d.avg_unit_price || (!hasCommunity && !hasNearby)) {
       box.innerHTML = `<div style="color:var(--mute);text-align:center;padding:.3rem;">
-        查無「${name}」的近5年成交記錄，請嘗試其他關鍵字
+        查無「${name}」及周遭生活圈的近2年成交記錄，請嘗試其他關鍵字
       </div>`;
       return;
     }
@@ -1118,9 +1120,12 @@ async function doEstimate() {
 
     const nearbyNote = d.tx_nearby > 0 ? `＋周遭 ${d.tx_nearby} 筆` : '';
     const filterNote = d.tx_raw > d.tx_count ? `（已自動排除異常成交）` : '';
+    const sourceNote = hasCommunity
+      ? `📊 根據 <b>${d.tx_count}</b> 筆近期${d.community}實價登錄資料${filterNote}${nearbyNote}`
+      : `📊 ${d.community} 近2年無成交記錄，依同生活圈 <b>${d.tx_nearby}</b> 筆周遭行情推估`;
     box.innerHTML = `
       <div style="font-size:.7rem;color:var(--mute);margin-bottom:.6rem;">
-        📊 根據 <b>${d.tx_count}</b> 筆近期${d.community}實價登錄資料${filterNote}${nearbyNote} · 最新：${d.latest_date || '—'}
+        ${sourceNote} · 最新：${d.latest_date || '—'}
       </div>
       <div class="result-row"><span>近2年成交單價區間</span>
         <span style="color:var(--navy);font-weight:700;">${d.q1 ?? lo} – ${d.q3 ?? hi} <small style="font-weight:400;color:var(--mute);">萬/坪</small></span>
