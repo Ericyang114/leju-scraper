@@ -737,6 +737,55 @@ def search_communities(query: str, limit: int = 8) -> list:
         """, (three_yr, q, limit))
 
 
+def get_community_quarterly_trend(name: str, sid: int = None) -> list:
+    """回傳社區每季均價走勢（近3年，排除特殊交易，node 含車位需自行扣除）。"""
+    from collections import defaultdict
+    three_yr = _three_year_roc()
+    clauses = [
+        f"community={PH}",
+        "unit_price > 0",
+        f"transaction_date >= {PH}",
+        "(is_special_trade IS NULL OR is_special_trade=0)",
+    ]
+    params: list = [name, three_yr]
+    if sid:
+        clauses.append(f"sid={PH}")
+        params.append(sid)
+    where = " AND ".join(clauses)
+    with get_conn() as conn:
+        rows = _rows(conn, f"""
+            SELECT transaction_date, unit_price
+            FROM transactions
+            WHERE {where}
+            ORDER BY transaction_date ASC
+        """, params)
+
+    buckets: dict = defaultdict(list)
+    for r in rows:
+        raw = (r.get("transaction_date") or "").strip()
+        parts = raw.replace("-", "/").split("/")
+        if len(parts) >= 2:
+            try:
+                roc_yr  = int(parts[0])
+                month   = int(parts[1])
+                year    = roc_yr + 1911 if roc_yr < 200 else roc_yr
+                quarter = (month - 1) // 3 + 1
+                buckets[(year, quarter)].append(float(r["unit_price"]))
+            except (ValueError, TypeError):
+                continue
+
+    result = []
+    for (year, q) in sorted(buckets.keys()):
+        prices = buckets[(year, q)]
+        if prices:
+            result.append({
+                "label": f"{year} Q{q}",
+                "avg":   round(sum(prices) / len(prices), 1),
+                "count": len(prices),
+            })
+    return result
+
+
 def get_community_estimate(name: str, sid: int = None) -> dict | None:
     """估價器：指數時間衰減 + 同生活圈周遭補充加權估價（方法二A）。
     資料窗口：2 年

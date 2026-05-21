@@ -378,6 +378,17 @@ def api_community_coords():
     return jsonify({"error": "not found"}), 404
 
 
+@app.route("/api/community-trend")
+def api_community_trend():
+    name = request.args.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "name required"}), 400
+    sid_str = request.args.get("sid", "")
+    sid = int(sid_str) if sid_str.isdigit() else None
+    trend = db.get_community_quarterly_trend(name, sid)
+    return jsonify(trend)
+
+
 @app.route("/api/estimate")
 def api_estimate():
     name = request.args.get("name", "").strip()

@@ -3,7 +3,49 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>楊肇寧 · 老楊房快說 · 永慶不動產</title>
+  <title>楊肇寧 · 老楊房快說 · 永慶不動產 | 桃園新北房產行情工具</title>
+
+  <!-- ── SEO ── -->
+  <meta name="description" content="老楊房快說 · 永慶不動產楊肇寧，提供桃園市、新北市鶯歌區最即時實價登錄查詢、房價行情試算、房貸試算、土地增值稅試算，深耕在地市場，協助您精準掌握買賣行情。">
+  <meta name="keywords" content="桃園房仲,楊肇寧,老楊房快說,永慶不動產,桃園實價登錄,鶯歌房價,行情試算,房貸試算,桃園買房,購屋">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://leju-scraper.onrender.com/">
+
+  <!-- ── Open Graph（LINE / FB 分享縮圖）── -->
+  <meta property="og:type"        content="website">
+  <meta property="og:url"         content="https://leju-scraper.onrender.com/">
+  <meta property="og:title"       content="老楊房快說 · 楊肇寧 | 桃園新北房產行情工具">
+  <meta property="og:description" content="桃園市、鶯歌區最即時實價登錄查詢 · 行情試算 · 房貸試算 · 土地增值稅試算，深耕在地市場的永慶房仲楊肇寧。">
+  <meta property="og:image"       content="https://leju-scraper.onrender.com/static/images/avatar.png">
+  <meta property="og:image:width" content="400">
+  <meta property="og:image:height" content="400">
+  <meta property="og:locale"      content="zh_TW">
+  <meta property="og:site_name"   content="老楊房快說">
+
+  <!-- ── JSON-LD 結構化資料 ── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "RealEstateAgent",
+    "name": "楊肇寧｜老楊房快說",
+    "alternateName": "老楊房快說",
+    "description": "深耕桃園市、新北市鶯歌區房產市場，提供最即時、透明的成交實價登錄資訊，協助您精準掌握市場行情，做出最佳置產決策。",
+    "url": "https://leju-scraper.onrender.com/",
+    "telephone": "+886935195944",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "桃園市",
+      "addressCountry": "TW"
+    },
+    "areaServed": ["桃園市", "新北市鶯歌區"],
+    "memberOf": {
+      "@type": "Organization",
+      "name": "永慶不動產"
+    },
+    "sameAs": []
+  }
+  </script>
+
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -133,6 +175,33 @@
 
     /* ── Footer ── */
     footer{background:var(--navy);color:rgba(255,255,255,.38);text-align:center;font-size:.68rem;padding:1.1rem;font-family:'Noto Sans TC',system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;}
+
+    /* ── 趨勢圖 ── */
+    .trend-wrap{margin-top:.9rem;background:#fff;border-radius:10px;padding:.8rem .6rem .5rem;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+    .trend-title{font-size:.72rem;font-weight:700;color:var(--navy);margin-bottom:.5rem;display:flex;align-items:center;gap:.3rem;}
+    .trend-empty{font-size:.72rem;color:var(--mute);text-align:center;padding:.8rem 0;}
+
+    /* ── 房貸明細表 ── */
+    .amort-wrap{margin-top:.8rem;}
+    .btn-amort{width:100%;background:none;border:1px solid #dee2e6;border-radius:7px;padding:.35rem;font-size:.75rem;color:var(--mute);cursor:pointer;transition:.15s;}
+    .btn-amort:hover{background:#f3f4f6;color:var(--navy);}
+    .amort-table-wrap{margin-top:.5rem;max-height:260px;overflow-y:auto;border-radius:8px;border:1px solid #f0f2f5;}
+    .amort-table{width:100%;border-collapse:collapse;font-size:.72rem;}
+    .amort-table th{background:#f8faff;color:var(--navy);font-weight:700;padding:.3rem .5rem;position:sticky;top:0;border-bottom:1px solid #e2e8f0;text-align:right;}
+    .amort-table th:first-child{text-align:left;}
+    .amort-table td{padding:.3rem .5rem;border-bottom:1px solid #f0f2f5;text-align:right;color:var(--text);}
+    .amort-table td:first-child{text-align:left;color:var(--mute);}
+    .amort-table tr:last-child td{border:none;}
+    .amort-table tr.grace-row td{color:#9333ea;}
+
+    /* ── 免責/隱私 Modal ── */
+    .text-modal-bd{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:flex-end;justify-content:center;}
+    .text-modal-bd.show{display:flex;}
+    .text-modal-box{background:#fff;border-radius:16px 16px 0 0;padding:1.4rem 1.2rem 1.8rem;max-height:75vh;overflow-y:auto;width:100%;max-width:600px;}
+    .text-modal-title{font-size:.95rem;font-weight:700;color:var(--navy);margin-bottom:.9rem;}
+    .text-modal-body{font-size:.75rem;color:var(--text);line-height:1.9;}
+    .text-modal-body h4{font-size:.8rem;font-weight:700;color:var(--navy);margin:1rem 0 .3rem;}
+    .text-modal-close{display:block;width:100%;margin-top:1rem;padding:.42rem;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;}
   </style>
 </head>
 <body>
@@ -424,6 +493,10 @@
       </div>
       <button class="btn-calc" onclick="calcMortgage()">房貸試算</button>
       <div class="result-box" id="m_result"></div>
+      <div class="amort-wrap" id="m_amort_wrap" style="display:none;">
+        <button class="btn-amort" id="m_amort_btn" onclick="toggleAmort()">▾ 展開逐年還款明細</button>
+        <div class="amort-table-wrap" id="m_amort_table" style="display:none;"></div>
+      </div>
     </div>
   </div>
 
@@ -541,6 +614,12 @@
 
       <button class="btn-calc" onclick="doEstimate()">開始試算</button>
       <div class="result-box" id="est_result"></div>
+      <!-- 趨勢圖（估價後顯示） -->
+      <div class="trend-wrap" id="est_trend_wrap" style="display:none;">
+        <div class="trend-title">📈 近3年每季成交單價走勢</div>
+        <canvas id="est_trend_chart" height="160"></canvas>
+        <div class="trend-empty" id="est_trend_empty" style="display:none;">此社區近3年成交資料不足，無法產生趨勢圖</div>
+      </div>
     </div>
   </div>
 
@@ -573,11 +652,75 @@
     本站各項試算結果<strong style="color:rgba(255,255,255,.75);">並非《不動產估價師法》所稱之估價報告書</strong>，<br>
     不得作為融資、訴訟、稅務申報之依據。實際成交以官方登錄為準。
   </div>
-  <div class="mt-2"><a href="/dashboard" style="color:rgba(255,255,255,.2);font-size:.62rem;text-decoration:none;">管理後台</a></div>
+  <div class="mt-2 d-flex align-items-center justify-content-center gap-3" style="flex-wrap:wrap;">
+    <button onclick="openModal('modal-disclaimer')" style="background:none;border:none;color:rgba(255,255,255,.35);font-size:.62rem;cursor:pointer;padding:0;text-decoration:underline;">免責聲明</button>
+    <span style="color:rgba(255,255,255,.15);">｜</span>
+    <button onclick="openModal('modal-privacy')" style="background:none;border:none;color:rgba(255,255,255,.35);font-size:.62rem;cursor:pointer;padding:0;text-decoration:underline;">隱私政策</button>
+    <span style="color:rgba(255,255,255,.15);">｜</span>
+    <a href="/dashboard" style="color:rgba(255,255,255,.2);font-size:.62rem;text-decoration:none;">管理後台</a>
+  </div>
+  <div class="mt-2" style="color:rgba(255,255,255,.18);font-size:.6rem;">
+    © <span id="footer-year"></span> 楊肇寧 · 老楊房快說 · 版權所有
+  </div>
 </footer>
+
+<!-- ── 免責聲明 Modal ── -->
+<div class="text-modal-bd" id="modal-disclaimer" onclick="if(event.target===this)closeModal('modal-disclaimer')">
+  <div class="text-modal-box">
+    <div class="text-modal-title">免責聲明</div>
+    <div class="text-modal-body">
+      <h4>一、資料來源</h4>
+      本網站所有實價登錄資料均來自內政部不動產成交案件實際資訊申報系統之公開資訊，本站僅進行蒐集、整理與統計呈現，不對資料之正確性及完整性負責。
+
+      <h4>二、試算結果性質</h4>
+      本站行情試算、房貸試算、土地增值稅試算、房地合一稅試算及各項費用試算，<strong>均為統計學上之參考估算，並非《不動產估價師法》第14條所稱之不動產估價報告書</strong>，不得作為融資、訴訟、稅務申報、徵收補償等法律文件之依據。
+
+      <h4>三、實際成交差異</h4>
+      房地產實際成交價格受樓層、屋況、裝潢、市場供需、議價能力等多種因素影響，本站試算結果僅供市場行情參考，實際買賣價格以市場協商及官方實價登錄為準。
+
+      <h4>四、責任限制</h4>
+      使用者依據本站資訊所做之任何決策，本站及服務提供者不承擔任何直接或間接損失責任。如需專業估價，請洽詢合法執業之不動產估價師。
+
+      <h4>五、著作權</h4>
+      本站頁面設計、工具介面及原創文字均受著作權法保護，未經書面授權不得複製、轉載或商業使用。
+    </div>
+    <button class="text-modal-close" onclick="closeModal('modal-disclaimer')">關閉</button>
+  </div>
+</div>
+
+<!-- ── 隱私政策 Modal ── -->
+<div class="text-modal-bd" id="modal-privacy" onclick="if(event.target===this)closeModal('modal-privacy')">
+  <div class="text-modal-box">
+    <div class="text-modal-title">隱私政策</div>
+    <div class="text-modal-body">
+      <h4>一、個人資料收集</h4>
+      本網站為靜態工具頁面，<strong>不主動蒐集任何訪客個人識別資訊</strong>（姓名、電子郵件、身分證字號等）。所有房價試算均在您的裝置本地運算，不傳送至伺服器。
+
+      <h4>二、Cookie 與本地儲存</h4>
+      本站使用 sessionStorage 暫時儲存生活機能 POI 查詢結果以提升載入速度，該資料僅存於您的瀏覽器，於分頁關閉後自動清除。本站不設置追蹤 Cookie。
+
+      <h4>三、第三方服務</h4>
+      本站使用以下第三方服務，其各自擁有獨立隱私政策：
+      <ul style="margin:.4rem 0 0 1rem;line-height:1.9;">
+        <li>OpenStreetMap Overpass API（生活機能查詢）</li>
+        <li>Nominatim 地理編碼服務</li>
+        <li>Leaflet.js 地圖顯示</li>
+        <li>Google Fonts（字型載入）</li>
+      </ul>
+
+      <h4>四、外部連結</h4>
+      點擊電話、LINE 或其他外部連結時，您的瀏覽器行為將受該平台隱私政策規範，本站不對其負責。
+
+      <h4>五、政策更新</h4>
+      本政策如有修訂，將直接更新於本頁面，不另行通知。如有疑問，請透過 LINE 或電話與楊肇寧聯繫。
+    </div>
+    <button class="text-modal-close" onclick="closeModal('modal-privacy')">關閉</button>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 // ── 生活機能 POI ───────────────────────────────────────────────
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
@@ -782,6 +925,16 @@ function lifeSearchByGPS(){
 }
 </script>
 <script>
+// ── 版權年份自動更新 ──
+document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+// ── 免責/隱私 Modal ──
+function openModal(id)  { document.getElementById(id).classList.add('show');    document.body.style.overflow='hidden'; }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); document.body.style.overflow=''; }
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape') document.querySelectorAll('.text-modal-bd.show').forEach(m=>{ m.classList.remove('show'); document.body.style.overflow=''; });
+});
+
 // ── Tab switching ──
 function switchTab(name, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -978,17 +1131,26 @@ function calcAfford() {
 }
 
 // ── 房貸試算 ──
+let _amortData = []; // 儲存逐月資料供明細表使用
+let _amortOpen  = false;
+function toggleAmort() {
+  _amortOpen = !_amortOpen;
+  const table = document.getElementById('m_amort_table');
+  const btn   = document.getElementById('m_amort_btn');
+  table.style.display = _amortOpen ? '' : 'none';
+  btn.textContent = _amortOpen ? '▴ 收起還款明細' : '▾ 展開逐年還款明細';
+}
 function calcMortgage() {
-  const P = (parseFloat(document.getElementById('m_loan').value) || 0) * 10000;
+  const P       = (parseFloat(document.getElementById('m_loan').value) || 0) * 10000;
   const annRate = parseFloat(document.getElementById('m_rate').value) || 2.2;
   const years   = parseInt(document.getElementById('m_years').value) || 30;
   const grace   = parseInt(document.getElementById('m_grace').value) || 0;
-  const r = annRate / 100 / 12;
-  const n = years * 12;
-  const g = grace * 12;
+  const r       = annRate / 100 / 12;
+  const n       = years * 12;
+  const g       = grace * 12;
   const graceMonthly = P * r;
-  const repayN = n - g;
-  let monthly = 0;
+  const repayN  = n - g;
+  let monthly   = 0;
   if (repayN > 0 && r > 0) {
     monthly = P * r * Math.pow(1+r, repayN) / (Math.pow(1+r, repayN) - 1);
   }
@@ -1002,6 +1164,49 @@ function calcMortgage() {
     <div class="result-row"><span>總利息</span><span>${fmtNT(totalInterest)}</span></div>
     <div class="result-row"><span>總還款金額</span><span style="color:#c0392b;">${fmtNT(P + totalInterest)}</span></div>
   `;
+
+  // ── 逐年明細 ──────────────────────────────────────────────────
+  if (P <= 0) { document.getElementById('m_amort_wrap').style.display='none'; return; }
+  _amortData = [];
+  let balance = P;
+  for (let m = 1; m <= n; m++) {
+    const isGrace    = m <= g;
+    const interest   = balance * r;
+    const principal  = isGrace ? 0 : monthly - interest;
+    balance -= principal;
+    if (balance < 0) balance = 0;
+    _amortData.push({ month: m, isGrace, interest, principal, payment: isGrace ? graceMonthly : monthly, balance });
+  }
+  // 按年彙總
+  const yearRows = [];
+  for (let y = 1; y <= years; y++) {
+    const slice    = _amortData.slice((y-1)*12, y*12);
+    const totPrinc = slice.reduce((s, x) => s + x.principal, 0);
+    const totInt   = slice.reduce((s, x) => s + x.interest,  0);
+    const endBal   = slice[slice.length-1].balance;
+    const inGrace  = slice.every(x => x.isGrace);
+    yearRows.push({ y, totPrinc, totInt, endBal, inGrace });
+  }
+  const fmt2 = v => Math.round(v/10000).toLocaleString();
+  let tHtml = `<table class="amort-table">
+    <thead><tr>
+      <th>年</th><th>還本（萬）</th><th>付息（萬）</th><th>年末餘額（萬）</th>
+    </tr></thead><tbody>`;
+  yearRows.forEach(({y, totPrinc, totInt, endBal, inGrace}) => {
+    tHtml += `<tr class="${inGrace?'grace-row':''}">
+      <td>${y}${inGrace?' <small>(寬限)</small>':''}</td>
+      <td>${fmt2(totPrinc)}</td>
+      <td>${fmt2(totInt)}</td>
+      <td>${fmt2(endBal)}</td>
+    </tr>`;
+  });
+  tHtml += `</tbody></table>`;
+  document.getElementById('m_amort_table').innerHTML = tHtml;
+  // 重置展開狀態
+  _amortOpen = false;
+  document.getElementById('m_amort_table').style.display = 'none';
+  document.getElementById('m_amort_btn').textContent = '▾ 展開逐年還款明細';
+  document.getElementById('m_amort_wrap').style.display = '';
 }
 
 // ── 買賣雜費 ──
@@ -1269,6 +1474,7 @@ async function doEstimate() {
   const area = parseFloat(document.getElementById('est_area').value) || 0;
   const box  = document.getElementById('est_result');
 
+  document.getElementById('est_trend_wrap').style.display = 'none';
   if (!name) {
     box.classList.add('show');
     box.innerHTML = '<div style="color:#c0392b;text-align:center;">請輸入社區名稱</div>';
@@ -1288,6 +1494,7 @@ async function doEstimate() {
       box.innerHTML = `<div style="color:var(--mute);text-align:center;padding:.3rem;">
         查無「${name}」及周遭生活圈的近2年成交記錄，請嘗試其他關鍵字
       </div>`;
+      document.getElementById('est_trend_wrap').style.display = 'none';
       return;
     }
 
@@ -1380,8 +1587,86 @@ async function doEstimate() {
         ＊ 實際成交受樓層、裝潢、屋況、市況等因素影響<br>
         ＊ 如需專業評估請直接聯繫老楊
       </div>`;
+
+    // ── 趨勢圖 ─────────────────────────────────────────────────
+    renderTrendChart(name, sid);
+
   } catch(e) {
     box.innerHTML = '<div style="color:#c0392b;text-align:center;">查詢失敗，請稍後再試</div>';
+    document.getElementById('est_trend_wrap').style.display = 'none';
+  }
+}
+
+// ── 趨勢圖繪製 ──────────────────────────────────────────────────────────
+let _trendChart = null; // 保存 Chart 實例，防止重複建立
+async function renderTrendChart(name, sid) {
+  const wrap  = document.getElementById('est_trend_wrap');
+  const empty = document.getElementById('est_trend_empty');
+  const canvas = document.getElementById('est_trend_chart');
+  wrap.style.display = '';
+  empty.style.display = 'none';
+  canvas.style.display = '';
+
+  try {
+    const url = '/api/community-trend?name=' + encodeURIComponent(name) + (sid ? '&sid=' + sid : '');
+    const trend = await fetch(url).then(r => r.json());
+
+    // 需要至少2個季度才畫圖
+    if (!Array.isArray(trend) || trend.length < 2) {
+      canvas.style.display = 'none';
+      empty.style.display  = '';
+      return;
+    }
+
+    const labels = trend.map(t => t.label);
+    const data   = trend.map(t => t.avg);
+    const counts = trend.map(t => t.count);
+
+    // 銷毀舊 chart 再建新的，避免 canvas reuse 報錯
+    if (_trendChart) { _trendChart.destroy(); _trendChart = null; }
+
+    _trendChart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: '平均單價（萬/坪）',
+          data,
+          borderColor: '#1a2e5a',
+          backgroundColor: 'rgba(26,46,90,.08)',
+          pointBackgroundColor: '#b8922a',
+          pointRadius: 4,
+          tension: 0.35,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const c = counts[ctx.dataIndex];
+                return ` ${ctx.parsed.y} 萬/坪（${c} 筆）`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { font: { size: 10 }, maxRotation: 45 } },
+          y: {
+            ticks: {
+              font: { size: 10 },
+              callback: v => v + ' 萬'
+            },
+            beginAtZero: false,
+          }
+        }
+      }
+    });
+  } catch(e) {
+    wrap.style.display = 'none';
   }
 }
 
