@@ -739,15 +739,18 @@ def search_communities(query: str, limit: int = 8) -> list:
 
 def get_community_estimate(name: str, sid: int = None) -> dict | None:
     """估價器：指數時間衰減 + 同生活圈周遭補充加權估價（方法二A）。
+    資料窗口：2 年
     同社區  : weight = e^(-0.06 × 距今月數)
-    同生活圈: weight = 0.25 × e^(-0.08 × 距今月數)
-    先 IQR 過濾同社區離群值，再合併加權平均。
+    同生活圈: weight = 0.10 × e^(-0.08 × 距今月數)
+    先判斷社區性質（預售 or 成屋），再 IQR 過濾同社區離群值，最後合併加權平均。
+    - 成屋社區：排除預售屋成交（age='預售'）
+    - 預售社區：排除成屋成交（age!='預售'），僅保留預售登錄
     """
     import math, statistics
+    from collections import Counter
 
-    three_yr = _three_year_roc()
-    two_yr   = _two_year_roc()
-    today    = date.today()
+    two_yr = _two_year_roc()
+    today  = date.today()
 
     def _months_ago(tx_date: str) -> float:
         try:
@@ -756,48 +759,13 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
             m     = int(parts[1])
             return max(0.0, (today.year - wy) * 12 + (today.month - m))
         except Exception:
-            return 36.0
+            return 24.0
 
     def _adj_price(r):
         hp = (r["total_price"] or 0) - (r["parking_price"] or 0)
         ha = (r["total_area"]  or 0) - (r["parking_area"]  or 0)
         return hp / ha if hp > 0 and ha > 0 else None
 
-    # ── 同社區查詢 ─────────────────────────────────────────────────
-    c_cl = [f"community={PH}",
-            "(is_special_trade IS NULL OR is_special_trade=0)",
-            f"transaction_date>={PH}", "total_price>0", "total_area>0"]
-    c_p  = [name, three_yr]
-    if sid:
-        c_cl.append(f"sid={PH}"); c_p.append(sid)
-
-    # ── 同生活圈（周遭）查詢 ───────────────────────────────────────
-    n_rows: list = []
-    if sid:
-        n_cl = [f"sid={PH}", f"community!={PH}", "community IS NOT NULL",
-                "(is_special_trade IS NULL OR is_special_trade=0)",
-                f"transaction_date>={PH}", "total_price>0", "total_area>0"]
-        n_p  = [sid, name, three_yr]
-
-    with get_conn() as conn:
-        c_rows = _rows(conn, f"""
-            SELECT community, total_price, total_area,
-                   parking_price, parking_area, transaction_date, age, building_type
-            FROM transactions WHERE {" AND ".join(c_cl)}
-            ORDER BY transaction_date DESC
-        """, c_p)
-        if sid:
-            n_rows = _rows(conn, f"""
-                SELECT total_price, total_area,
-                       parking_price, parking_area, transaction_date, age, building_type
-                FROM transactions WHERE {" AND ".join(n_cl)}
-                ORDER BY transaction_date DESC LIMIT 300
-            """, n_p)
-
-    if not c_rows and not n_rows:
-        return {"community": name, "tx_count": 0}
-
-    # ── 解析屋齡輔助 ────────────────────────────────────────────────
     def _parse_age(r):
         a = r.get("age")
         if not a or a == "預售":
@@ -806,6 +774,81 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
             return int(a)
         except Exception:
             return None
+
+    # ── Step 1：先撈近 2 年同社區全部資料，判斷社區性質 ──────────
+    c_cl_all = [f"community={PH}",
+                "(is_special_trade IS NULL OR is_special_trade=0)",
+                f"transaction_date>={PH}", "total_price>0", "total_area>0"]
+    c_p_all  = [name, two_yr]
+    if sid:
+        c_cl_all.append(f"sid={PH}"); c_p_all.append(sid)
+
+    with get_conn() as conn:
+        c_rows_all = _rows(conn, f"""
+            SELECT community, total_price, total_area,
+                   parking_price, parking_area, transaction_date, age, building_type
+            FROM transactions WHERE {" AND ".join(c_cl_all)}
+            ORDER BY transaction_date DESC
+        """, c_p_all)
+
+    # 若 2 年內無資料，往前擴展至 3 年（避免空白）
+    if not c_rows_all:
+        three_yr = _three_year_roc()
+        c_p_all[-1 if not sid else -2] = three_yr  # 替換日期參數
+        # 重新用正確方式替換
+        c_p_fallback = [name, three_yr]
+        if sid:
+            c_p_fallback.append(sid)
+        with get_conn() as conn:
+            c_rows_all = _rows(conn, f"""
+                SELECT community, total_price, total_area,
+                       parking_price, parking_area, transaction_date, age, building_type
+                FROM transactions WHERE {" AND ".join(c_cl_all)}
+                ORDER BY transaction_date DESC
+            """, c_p_fallback)
+
+    # 判斷社區性質：有任何成屋成交（age != '預售'）→ 成屋社區
+    # 只有全部都是預售登錄、完全沒有成屋成交，才視為預售社區
+    has_completed = any(r.get("age") != "預售" for r in c_rows_all)
+    is_presale_community = (len(c_rows_all) > 0 and not has_completed)
+
+    # ── Step 2：依社區性質篩選同社區 & 周遭 ──────────────────────
+    if is_presale_community:
+        age_clause = "AND age='預售'"          # 預售社區：只要預售登錄
+    else:
+        age_clause = "AND (age IS NULL OR age!='預售')"  # 成屋社區：排除預售
+
+    c_cl = [f"community={PH}",
+            "(is_special_trade IS NULL OR is_special_trade=0)",
+            f"transaction_date>={PH}", "total_price>0", "total_area>0"]
+    c_p  = [name, two_yr]
+    if sid:
+        c_cl.append(f"sid={PH}"); c_p.append(sid)
+
+    n_rows: list = []
+    if sid:
+        n_cl = [f"sid={PH}", f"community!={PH}", "community IS NOT NULL",
+                "(is_special_trade IS NULL OR is_special_trade=0)",
+                f"transaction_date>={PH}", "total_price>0", "total_area>0"]
+        n_p  = [sid, name, two_yr]
+
+    with get_conn() as conn:
+        c_rows = _rows(conn, f"""
+            SELECT community, total_price, total_area,
+                   parking_price, parking_area, transaction_date, age, building_type
+            FROM transactions WHERE {" AND ".join(c_cl)} {age_clause}
+            ORDER BY transaction_date DESC
+        """, c_p)
+        if sid:
+            n_rows = _rows(conn, f"""
+                SELECT total_price, total_area,
+                       parking_price, parking_area, transaction_date, age, building_type
+                FROM transactions WHERE {" AND ".join(n_cl)} {age_clause}
+                ORDER BY transaction_date DESC LIMIT 300
+            """, n_p)
+
+    if not c_rows and not n_rows:
+        return {"community": name, "tx_count": 0}
 
     # ── 同社區調整單價 + IQR 過濾 ─────────────────────────────────
     c_prices = [(p, r["transaction_date"])
@@ -826,18 +869,19 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         c_prices  = [(p, d) for p, d in c_prices if p >= med_floor * 0.65] or c_prices
 
     # ── 周遭篩選①：物件類型需與社區相同 ─────────────────────────
-    c_types = [r.get("building_type") for r in c_rows if r.get("building_type")]
+    # 物件類型參考來源：c_rows_all（含全部資料，避免篩後為空）
+    c_types = [r.get("building_type") for r in c_rows_all if r.get("building_type")]
     if c_types and n_rows:
-        from collections import Counter
         main_type = Counter(c_types).most_common(1)[0][0]
         n_rows = [r for r in n_rows if r.get("building_type") == main_type]
 
-    # ── 周遭篩選②：屋齡 ±7 年 ─────────────────────────────────────
-    c_ages = [a for r in c_rows if (a := _parse_age(r)) is not None]
-    if c_ages and n_rows:
-        med_age = statistics.median(c_ages)
-        n_rows  = [r for r in n_rows
-                   if (a := _parse_age(r)) is not None and med_age - 7 <= a <= med_age + 7]
+    # ── 周遭篩選②：屋齡 ±7 年（預售社區跳過）────────────────────
+    if not is_presale_community:
+        c_ages = [a for r in c_rows_all if (a := _parse_age(r)) is not None]
+        if c_ages and n_rows:
+            med_age = statistics.median(c_ages)
+            n_rows  = [r for r in n_rows
+                       if (a := _parse_age(r)) is not None and med_age - 7 <= a <= med_age + 7]
 
     all_n_prices = [(p, r["transaction_date"])
                     for r in n_rows if (p := _adj_price(r)) is not None]
@@ -872,34 +916,33 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
             p_prices.append(pp); p_areas.append(pa)
 
     filtered_vals = sorted(p for p, _ in c_prices)
-    latest = (c_rows or n_rows)[0]["transaction_date"]
+    latest = (c_rows or c_rows_all)[0]["transaction_date"]
 
-    # ── Q1、Q3（顯示近2年成交集中區間）────────────────────────────
-    two_yr_vals = sorted(p for p, d in c_prices if _months_ago(d) <= 24)
-    vals_for_range = two_yr_vals if len(two_yr_vals) >= 2 else filtered_vals
-    if len(vals_for_range) >= 4:
-        q1_disp = statistics.quantiles(vals_for_range, n=4)[0]
-        q3_disp = statistics.quantiles(vals_for_range, n=4)[2]
-    elif vals_for_range:
-        q1_disp = min(vals_for_range)
-        q3_disp = max(vals_for_range)
+    # ── Q1、Q3（同社區成交集中區間）──────────────────────────────
+    if len(filtered_vals) >= 4:
+        q1_disp = statistics.quantiles(filtered_vals, n=4)[0]
+        q3_disp = statistics.quantiles(filtered_vals, n=4)[2]
+    elif filtered_vals:
+        q1_disp = min(filtered_vals)
+        q3_disp = max(filtered_vals)
     else:
         q1_disp = q3_disp = None
 
     return {
-        "community":         (c_rows[0] if c_rows else {}).get("community", name),
-        "tx_count":          len(c_prices),
-        "tx_raw":            tx_raw,
-        "tx_nearby":         len(n_prices),
-        "avg_unit_price":    round(avg_p, 1),
-        "max_unit_price":    round(max(filtered_vals), 1) if filtered_vals else None,
-        "min_unit_price":    round(min(filtered_vals), 1) if filtered_vals else None,
-        "q1":                round(q1_disp, 1) if q1_disp is not None else None,
-        "q3":                round(q3_disp, 1) if q3_disp is not None else None,
-        "latest_date":       latest,
-        "avg_parking_price": round(sum(p_prices)/len(p_prices), 0) if p_prices else None,
-        "avg_parking_area":  round(sum(p_areas) /len(p_areas),  1) if p_areas  else None,
-        "parking_sample":    len(p_prices),
+        "community":          (c_rows[0] if c_rows else c_rows_all[0]).get("community", name),
+        "tx_count":           len(c_prices),
+        "tx_raw":             tx_raw,
+        "tx_nearby":          len(n_prices),
+        "is_presale":         is_presale_community,
+        "avg_unit_price":     round(avg_p, 1),
+        "max_unit_price":     round(max(filtered_vals), 1) if filtered_vals else None,
+        "min_unit_price":     round(min(filtered_vals), 1) if filtered_vals else None,
+        "q1":                 round(q1_disp, 1) if q1_disp is not None else None,
+        "q3":                 round(q3_disp, 1) if q3_disp is not None else None,
+        "latest_date":        latest,
+        "avg_parking_price":  round(sum(p_prices)/len(p_prices), 0) if p_prices else None,
+        "avg_parking_area":   round(sum(p_areas) /len(p_areas),  1) if p_areas  else None,
+        "parking_sample":     len(p_prices),
     }
 
 
