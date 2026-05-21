@@ -585,14 +585,15 @@ const OVERPASS  = 'https://overpass-api.de/api/interpreter';
 const LIFE_CATS = [
   {key:'hospital',emoji:'🏥',label:'醫療院所',  q:`node["amenity"~"hospital|clinic|pharmacy"](around:800,LAT,LON);`},
   {key:'school',  emoji:'🏫',label:'學校',      q:`node["amenity"~"school|kindergarten|university|college"](around:1000,LAT,LON);way["amenity"~"school|kindergarten|university|college"](around:1000,LAT,LON);`},
-  {key:'super',   emoji:'🏪',label:'超市/便利店',q:`node["shop"~"supermarket|convenience"](around:600,LAT,LON);`},
-  {key:'mall',    emoji:'🛒',label:'賣場/量販店',q:`node["shop"~"wholesale|department_store|mall"](around:2000,LAT,LON);way["shop"~"wholesale|department_store|mall"](around:2000,LAT,LON);`},
+  {key:'super',   emoji:'🏪',label:'便利商店',   q:`node["shop"="convenience"](around:500,LAT,LON);`},
+  {key:'mall',    emoji:'🛒',label:'超市/量販店',q:`node["shop"~"supermarket|wholesale"](around:3000,LAT,LON);way["shop"~"supermarket|wholesale"](around:3000,LAT,LON);relation["shop"~"supermarket|wholesale"](around:3000,LAT,LON);`},
+  {key:'dept',    emoji:'🏬',label:'百貨/商場',  q:`node["shop"~"department_store|mall"](around:3000,LAT,LON);way["shop"~"department_store|mall"](around:3000,LAT,LON);relation["shop"~"department_store|mall"](around:3000,LAT,LON);`},
   {key:'tmarket', emoji:'🥬',label:'傳統市場',   q:`node["amenity"="marketplace"](around:800,LAT,LON);way["amenity"="marketplace"](around:800,LAT,LON);`},
   {key:'bus',     emoji:'🚌',label:'公車站牌',   q:`node["highway"="bus_stop"](around:400,LAT,LON);`},
   {key:'mrt',     emoji:'🚇',label:'捷運/火車站',q:`node["railway"~"station|subway_entrance"](around:1500,LAT,LON);`},
   {key:'park',    emoji:'🌳',label:'公園',       q:`node["leisure"="park"](around:600,LAT,LON);way["leisure"="park"](around:600,LAT,LON);`},
 ];
-const LIFE_COLORS={hospital:'#ef4444',school:'#f59e0b',super:'#10b981',mall:'#0891b2',tmarket:'#d97706',bus:'#3b82f6',mrt:'#8b5cf6',park:'#22c55e'};
+const LIFE_COLORS={hospital:'#ef4444',school:'#f59e0b',super:'#10b981',mall:'#0891b2',dept:'#7c3aed',tmarket:'#d97706',bus:'#3b82f6',mrt:'#8b5cf6',park:'#22c55e'};
 let lifeMap=null, lifeMarkers=[], lifeAcTimer=null;
 
 function lifeSetStatus(cls,html){const el=document.getElementById('lifeStatus');el.className='life-status '+cls;el.innerHTML=html;}
@@ -665,8 +666,9 @@ function lifeParsePOI(els,cLat,cLon){
     const t=el.tags||{};
     if(t.amenity==='hospital'||t.amenity==='clinic'||t.amenity==='pharmacy')byCat.hospital.push({name,d,lat:el.lat,lon:el.lon});
     else if(t.amenity==='school'||t.amenity==='kindergarten'||t.amenity==='university')byCat.school.push({name,d,lat:el.lat,lon:el.lon});
-    else if(t.shop==='supermarket'||t.shop==='convenience')byCat.super.push({name,d,lat:el.lat,lon:el.lon});
-    else if(t.shop==='wholesale'||t.shop==='department_store'||t.shop==='mall')byCat.mall.push({name,d,lat:el.lat,lon:el.lon});
+    else if(t.shop==='convenience')byCat.super.push({name,d,lat:el.lat,lon:el.lon});
+    else if(t.shop==='supermarket'||t.shop==='wholesale')byCat.mall.push({name,d,lat:el.lat,lon:el.lon});
+    else if(t.shop==='department_store'||t.shop==='mall')byCat.dept.push({name,d,lat:el.lat,lon:el.lon});
     else if(t.amenity==='marketplace')byCat.tmarket.push({name,d,lat:el.lat,lon:el.lon});
     else if(t.highway==='bus_stop')byCat.bus.push({name,d,lat:el.lat,lon:el.lon});
     else if(t.railway)byCat.mrt.push({name,d,lat:el.lat,lon:el.lon});
