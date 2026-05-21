@@ -584,7 +584,7 @@ const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
 const OVERPASS  = 'https://overpass-api.de/api/interpreter';
 const LIFE_CATS = [
   {key:'hospital',emoji:'🏥',label:'醫療院所',  q:`node["amenity"~"hospital|clinic|pharmacy"](around:800,LAT,LON);`},
-  {key:'school',  emoji:'🏫',label:'學校',      q:`node["amenity"~"school|kindergarten|university"](around:800,LAT,LON);`},
+  {key:'school',  emoji:'🏫',label:'學校',      q:`node["amenity"~"school|kindergarten|university|college"](around:1000,LAT,LON);way["amenity"~"school|kindergarten|university|college"](around:1000,LAT,LON);`},
   {key:'super',   emoji:'🏪',label:'超市/便利店',q:`node["shop"~"supermarket|convenience"](around:600,LAT,LON);`},
   {key:'mall',    emoji:'🛒',label:'賣場/量販店',q:`node["shop"~"wholesale|department_store|mall"](around:2000,LAT,LON);way["shop"~"wholesale|department_store|mall"](around:2000,LAT,LON);`},
   {key:'tmarket', emoji:'🥬',label:'傳統市場',   q:`node["amenity"="marketplace"](around:800,LAT,LON);way["amenity"="marketplace"](around:800,LAT,LON);`},
@@ -646,7 +646,7 @@ function lifeAddMarkers(byCat){
 }
 async function lifeFetchPOI(lat,lon){
   const allQ=LIFE_CATS.map(c=>c.q.replaceAll('LAT',lat).replaceAll('LON',lon)).join('\n');
-  const q=`[out:json][timeout:25];\n(\n${allQ}\n);\nout body;`;
+  const q=`[out:json][timeout:25];\n(\n${allQ}\n);\nout center body;`;
   const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),28000);
   const r=await fetch(OVERPASS,{method:'POST',body:'data='+encodeURIComponent(q),signal:ctrl.signal});
   return await r.json();
@@ -654,7 +654,11 @@ async function lifeFetchPOI(lat,lon){
 function lifeParsePOI(els,cLat,cLon){
   const byCat={};LIFE_CATS.forEach(c=>{byCat[c.key]=[];});
   els.forEach(el=>{
-    if(!el.lat)return;
+    // node 有 lat/lon，way 的座標在 center 欄位
+    const lat = el.lat ?? el.center?.lat;
+    const lon = el.lon ?? el.center?.lon;
+    if(!lat)return;
+    el.lat = lat; el.lon = lon; // 統一掛上去給後續使用
     const d=lifeDistM(cLat,cLon,el.lat,el.lon);
     const name=el.tags?.name||el.tags?.['name:zh']||el.tags?.['name:en'];
     if(!name)return;
