@@ -397,18 +397,29 @@ def get_subareas_by_post_code(post_code: str) -> list:
         """, (three_yr, three_yr, three_yr, post_code))
 
 
-def get_subarea_quarterly_trend(sid: int) -> list:
-    """回傳生活圈近5年每季均價走勢（排除特殊交易）。"""
-    five_yr = _five_year_roc()
+def get_subarea_quarterly_trend(
+    sid: int,
+    age_filter: str = "all",
+    type_filter: str = "all",
+    special_filter: str = "exclude",
+    date_from: str = "",
+    date_to: str = "",
+) -> list:
+    """回傳生活圈每季均價走勢，支援篩選條件。無日期範圍時預設近5年。"""
+    clauses, params = _build_clauses(
+        [f"sid={PH}", "unit_price > 0"], [sid],
+        age_filter, type_filter, special_filter, date_from, date_to,
+    )
+    if not date_from:
+        clauses.append(f"transaction_date >= {PH}")
+        params.append(_five_year_roc())
+    where = " AND ".join(clauses)
     with get_conn() as conn:
         rows = _rows(conn, f"""
             SELECT transaction_date, unit_price
             FROM transactions
-            WHERE sid = {PH}
-              AND unit_price > 0
-              AND transaction_date >= {PH}
-              AND (is_special_trade IS NULL OR is_special_trade = 0)
-        """, (sid, five_yr))
+            WHERE {where}
+        """, params)
 
     from collections import defaultdict
     buckets: dict = defaultdict(list)

@@ -138,7 +138,16 @@
   <!-- Quarterly trend chart -->
   {% if trend and trend|length > 2 %}
   <div class="trend-card">
-    <div class="title">📈 近5年季度均價走勢（萬/坪，排除特殊交易）</div>
+    <div class="title">
+      📈 季度均價走勢（萬/坪）
+      <span style="font-weight:400; color:#aaa; font-size:.75rem; margin-left:.5rem;">
+        {% if age_filter != 'all' or type_filter != 'all' or special_filter != 'exclude' or date_from or date_to %}
+          · 依目前篩選條件
+        {% else %}
+          · 近5年，排除特殊交易
+        {% endif %}
+      </span>
+    </div>
     <canvas id="trendChart" height="90"></canvas>
   </div>
   {% endif %}
