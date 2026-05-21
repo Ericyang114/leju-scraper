@@ -194,6 +194,38 @@
     .amort-table tr:last-child td{border:none;}
     .amort-table tr.grace-row td{color:#9333ea;}
 
+    /* ── 最近搜尋 ── */
+    .recent-wrap{margin-bottom:.8rem;}
+    .recent-label{font-size:.68rem;color:var(--mute);margin-bottom:.35rem;}
+    .recent-chips{display:flex;flex-wrap:wrap;gap:.3rem;}
+    .recent-chip{background:#eef2ff;color:var(--navy2);font-size:.72rem;padding:.18rem .55rem;border-radius:20px;border:1px solid #c7d2fe;cursor:pointer;white-space:nowrap;transition:.12s;}
+    .recent-chip:hover{background:#c7d2fe;}
+
+    /* ── 社區比較 ── */
+    .cmp-panel{margin-top:.9rem;background:#fff;border-radius:12px;padding:.85rem .8rem;box-shadow:0 1px 6px rgba(0,0,0,.08);}
+    .cmp-title{font-size:.78rem;font-weight:700;color:var(--navy);margin-bottom:.7rem;display:flex;align-items:center;justify-content:space-between;}
+    .cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;}
+    .cmp-col{background:var(--bg);border-radius:8px;padding:.65rem .7rem;position:relative;}
+    .cmp-col-name{font-size:.8rem;font-weight:700;color:var(--navy);margin-bottom:.4rem;padding-right:1.2rem;word-break:break-all;}
+    .cmp-row{display:flex;justify-content:space-between;font-size:.7rem;padding:.18rem 0;border-bottom:1px solid rgba(0,0,0,.05);}
+    .cmp-row:last-child{border:none;}
+    .cmp-row span:last-child{font-weight:600;color:var(--navy);}
+    .cmp-remove{position:absolute;top:.4rem;right:.5rem;background:none;border:none;cursor:pointer;font-size:.8rem;color:var(--mute);}
+    .cmp-remove:hover{color:#ef4444;}
+    .cmp-empty{font-size:.72rem;color:var(--mute);text-align:center;padding:.6rem;background:var(--bg);border-radius:8px;border:1px dashed #d1d5db;}
+    .btn-add-cmp{margin-top:.6rem;width:100%;background:none;border:1px dashed var(--navy);border-radius:7px;padding:.3rem;font-size:.74rem;color:var(--navy);cursor:pointer;transition:.12s;}
+    .btn-add-cmp:hover{background:#eef2ff;}
+    .btn-clear-cmp{background:none;border:none;font-size:.68rem;color:var(--mute);cursor:pointer;text-decoration:underline;}
+
+    /* ── 租金投報率 ── */
+    .yield-badge{display:inline-block;font-size:1.5rem;font-weight:700;}
+    .yield-good{color:#15803d;} .yield-ok{color:#b8922a;} .yield-low{color:#b91c1c;}
+
+    /* ── 換算工具 cross-link ── */
+    .xfill-bar{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.6rem;}
+    .btn-xfill{background:#eef2ff;color:var(--navy2);border:1px solid #c7d2fe;border-radius:6px;font-size:.72rem;padding:.22rem .6rem;cursor:pointer;transition:.12s;}
+    .btn-xfill:hover{background:#c7d2fe;}
+
     /* ── 免責/隱私 Modal ── */
     .text-modal-bd{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:flex-end;justify-content:center;}
     .text-modal-bd.show{display:flex;}
@@ -271,6 +303,7 @@
     <button class="tab-btn row2" onclick="switchTab('calc',this)">📐 換算工具</button>
     <button class="tab-btn row2" onclick="switchTab('life',this)">🗺️ 生活機能</button>
     <a class="tab-btn row2" href="/inspection" style="text-decoration:none;">🔍 看屋清單</a>
+    <button class="tab-btn row2" onclick="switchTab('yield',this)">💰 租金投報</button>
   </div>
 
   <!-- ===== 實價登錄 ===== -->
@@ -523,6 +556,43 @@
 
   <!-- ===== 換算工具（坪數＋車位合併）===== -->
   <div class="panel calc-panel" id="panel-calc">
+
+    <!-- ── 快速帶入中心 ── -->
+    <div class="calc-card">
+      <h2>🔗 計算機快速帶入</h2>
+      <div class="info-box mb-3" style="background:#f0f4ff;border-left-color:#6366f1;">
+        填入房屋相關數值後，可一鍵帶入其他計算機，免重複輸入。<br>
+        <b>公告地價</b>：每年7月地方政府公告，可查詢地政事務所或市府網站。<br>
+        <b>房屋評定現值</b>：稅捐稽徵處核定，一般為市價的10–20%，用於計算契稅。
+      </div>
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <label class="form-label-sm">成交總價（萬）</label>
+          <input type="number" id="xf_price" class="form-control form-control-sm" placeholder="例：2000" oninput="xfUpdate()">
+        </div>
+        <div class="col-6">
+          <label class="form-label-sm">取得成本（萬）</label>
+          <input type="number" id="xf_cost" class="form-control form-control-sm" placeholder="例：1500" oninput="xfUpdate()">
+        </div>
+        <div class="col-6">
+          <label class="form-label-sm">前次移轉現值（萬）<br><span style="font-size:.63rem;color:#999;">公告地價×持分面積</span></label>
+          <input type="number" id="xf_prev_land" class="form-control form-control-sm" placeholder="例：300" oninput="xfUpdate()">
+        </div>
+        <div class="col-6">
+          <label class="form-label-sm">申報移轉現值（萬）<br><span style="font-size:.63rem;color:#999;">本次公告地價×持分</span></label>
+          <input type="number" id="xf_curr_land" class="form-control form-control-sm" placeholder="例：500" oninput="xfUpdate()">
+        </div>
+      </div>
+      <div style="font-size:.73rem;color:var(--mute);margin-bottom:.4rem;">帶入下方計算機：</div>
+      <div class="xfill-bar">
+        <button class="btn-xfill" onclick="xfFill('mortgage')">🏦 房貸試算</button>
+        <button class="btn-xfill" onclick="xfFill('land')">🏛️ 房地合一</button>
+        <button class="btn-xfill" onclick="xfFill('landval')">📈 土地增值稅</button>
+        <button class="btn-xfill" onclick="xfFill('fees')">🧾 買賣雜費</button>
+        <button class="btn-xfill" onclick="xfFill('yield')">💰 租金投報</button>
+      </div>
+    </div>
+
     <div class="calc-card">
       <h2>📐 坪數換算</h2>
       <div class="info-box mb-3" style="background:#fff8e1;">換算公式：1 坪 = 3.30579 平方公尺　／　1 平方公尺 = 0.3025 坪</div>
@@ -566,6 +636,11 @@
 
   <!-- ===== 行情試算 ===== -->
   <div class="panel calc-panel" id="panel-estimate">
+    <!-- 最近搜尋 -->
+    <div class="recent-wrap" id="est_recent_wrap" style="display:none;">
+      <div class="recent-label">🕐 最近搜尋</div>
+      <div class="recent-chips" id="est_recent_chips"></div>
+    </div>
     <div class="calc-card">
       <h2>🏷️ 房價行情落點試算</h2>
       <div class="info-box mb-3">根據近2年內政部實價登錄公開資料，扣除車位後進行統計學上之區間推估，並以 IQR 統計法自動剔除離群值、排除特殊交易；無同社區成交時自動參考同生活圈周遭行情。<br><b>⚠ 本功能為市場行情統計參考，並非《不動產估價師法》所稱之估價報告書，不得作為融資、訴訟、稅務申報之依據。</b></div>
@@ -620,6 +695,16 @@
         <canvas id="est_trend_chart" height="160"></canvas>
         <div class="trend-empty" id="est_trend_empty" style="display:none;">此社區近3年成交資料不足，無法產生趨勢圖</div>
       </div>
+      <!-- 加入比較按鈕（估價後顯示） -->
+      <button class="btn-add-cmp" id="btn_add_cmp" style="display:none;" onclick="cmpAdd()">＋ 加入比較（最多2個社區）</button>
+    </div>
+    <!-- 社區比較面板 -->
+    <div class="cmp-panel" id="est_cmp_panel" style="display:none;">
+      <div class="cmp-title">
+        <span>📊 社區比較</span>
+        <button class="btn-clear-cmp" onclick="cmpClear()">清空</button>
+      </div>
+      <div class="cmp-grid" id="est_cmp_grid"></div>
     </div>
   </div>
 
@@ -639,6 +724,43 @@
       <div id="lifeStatus" class="life-status ls-idle">請搜尋社區或點「📍 定位」查詢周遭生活機能</div>
       <div id="lifePoiContent"></div>
       <div class="life-note" id="lifeNote" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- ===== 租金投報率 ===== -->
+  <div class="panel calc-panel" id="panel-yield">
+    <div class="calc-card">
+      <h2>💰 租金投報率試算</h2>
+      <div class="info-box mb-3" style="background:#f0fdf4;border-left-color:#16a34a;">
+        <b>毛投報率</b>＝年租金 ÷ 買入總價<br>
+        <b>淨投報率</b>＝（年租金 − 房屋稅 − 地價稅 − 修繕準備金）÷ 買入總價<br>
+        <span style="font-size:.68rem;color:#999;">※ 淨投報率中房屋稅＝評定現值×1.2%（住家），地價稅＝土地公告現值×0.1%（一般），修繕準備金預設月租10%</span>
+      </div>
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <label class="form-label-sm">買入總價（萬）</label>
+          <input type="number" id="yi_price" class="form-control form-control-sm" placeholder="例：2000" oninput="calcYield()">
+        </div>
+        <div class="col-6">
+          <label class="form-label-sm">估計月租金（元）</label>
+          <input type="number" id="yi_rent" class="form-control form-control-sm" placeholder="例：25000" oninput="calcYield()">
+        </div>
+        <div class="col-6">
+          <label class="form-label-sm">房屋評定現值（萬）<span style="color:#999;font-size:.65rem;"> 選填</span></label>
+          <input type="number" id="yi_assessed" class="form-control form-control-sm" placeholder="例：200" oninput="calcYield()">
+          <div style="font-size:.63rem;color:#999;margin-top:.18rem;">稅捐稽徵處核定，約市價10–20%</div>
+        </div>
+        <div class="col-6">
+          <label class="form-label-sm">公告土地現值（萬）<span style="color:#999;font-size:.65rem;"> 選填</span></label>
+          <input type="number" id="yi_landval" class="form-control form-control-sm" placeholder="例：500" oninput="calcYield()">
+          <div style="font-size:.63rem;color:#999;margin-top:.18rem;">每年7月地方政府公告</div>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label-sm">修繕準備金率（佔月租 %，預設10%）</label>
+        <input type="number" id="yi_repair" class="form-control form-control-sm" value="10" min="0" max="50" oninput="calcYield()">
+      </div>
+      <div class="result-box" id="yi_result"></div>
     </div>
   </div>
 
@@ -731,6 +853,7 @@ const LIFE_CATS = [
   {key:'hospital',emoji:'🏥',label:'醫療院所',  batch:'A', q:`node["amenity"~"hospital|clinic|pharmacy"](around:800,LAT,LON);`},
   {key:'school',  emoji:'🏫',label:'學校',      batch:'A', q:`node["amenity"~"school|kindergarten|university|college"](around:1000,LAT,LON);way["amenity"~"school|kindergarten|university|college"](around:1000,LAT,LON);`},
   {key:'super',   emoji:'🏪',label:'便利商店',   batch:'A', q:`node["shop"="convenience"](around:500,LAT,LON);`},
+  {key:'food',    emoji:'🍜',label:'餐廳/美食',  batch:'A', q:`node["amenity"~"restaurant|fast_food|cafe"](around:400,LAT,LON);`},
   {key:'bus',     emoji:'🚌',label:'公車站牌',   batch:'A', q:`node["highway"="bus_stop"](around:400,LAT,LON);`},
   {key:'mrt',     emoji:'🚇',label:'捷運/火車站',batch:'A', q:`node["railway"~"station|subway_entrance"](around:1500,LAT,LON);`},
   // ── 批次 B ──────────────────────────────────────────────────
@@ -740,7 +863,7 @@ const LIFE_CATS = [
   {key:'parking', emoji:'🅿️', label:'停車場',    batch:'B', q:`node["amenity"="parking"](around:600,LAT,LON);way["amenity"="parking"](around:600,LAT,LON);`},
   {key:'park',    emoji:'🌳',label:'公園',       batch:'B', q:`node["leisure"="park"](around:600,LAT,LON);way["leisure"="park"](around:600,LAT,LON);`},
 ];
-const LIFE_COLORS={hospital:'#ef4444',school:'#f59e0b',super:'#10b981',mall:'#0891b2',dept:'#7c3aed',tmarket:'#d97706',parking:'#6b7280',bus:'#3b82f6',mrt:'#8b5cf6',park:'#22c55e'};
+const LIFE_COLORS={hospital:'#ef4444',school:'#f59e0b',super:'#10b981',food:'#f97316',mall:'#0891b2',dept:'#7c3aed',tmarket:'#d97706',parking:'#6b7280',bus:'#3b82f6',mrt:'#8b5cf6',park:'#22c55e'};
 let lifeMap=null, lifeMarkers=[], lifeAcTimer=null;
 
 function lifeSetStatus(cls,html){const el=document.getElementById('lifeStatus');el.className='life-status '+cls;el.innerHTML=html;}
@@ -840,6 +963,7 @@ function lifeParsePOI(els,cLat,cLon){
     else if(t.amenity==='marketplace')byCat.tmarket.push({name,d,lat:el.lat,lon:el.lon});
     else if(t.highway==='bus_stop')byCat.bus.push({name,d,lat:el.lat,lon:el.lon});
     else if(t.railway)byCat.mrt.push({name,d,lat:el.lat,lon:el.lon});
+    else if(t.amenity==='restaurant'||t.amenity==='fast_food'||t.amenity==='cafe')byCat.food.push({name,d,lat:el.lat,lon:el.lon});
     else if(t.amenity==='parking')byCat.parking.push({name,d,lat:el.lat,lon:el.lon});
     else if(t.leisure==='park')byCat.park.push({name,d,lat:el.lat,lon:el.lon});
   });
@@ -1475,6 +1599,7 @@ async function doEstimate() {
   const box  = document.getElementById('est_result');
 
   document.getElementById('est_trend_wrap').style.display = 'none';
+  document.getElementById('btn_add_cmp').style.display = 'none';
   if (!name) {
     box.classList.add('show');
     box.innerHTML = '<div style="color:#c0392b;text-align:center;">請輸入社區名稱</div>';
@@ -1495,6 +1620,7 @@ async function doEstimate() {
         查無「${name}」及周遭生活圈的近2年成交記錄，請嘗試其他關鍵字
       </div>`;
       document.getElementById('est_trend_wrap').style.display = 'none';
+      document.getElementById('btn_add_cmp').style.display = 'none';
       return;
     }
 
@@ -1591,9 +1717,22 @@ async function doEstimate() {
     // ── 趨勢圖 ─────────────────────────────────────────────────
     renderTrendChart(name, sid);
 
+    // ── 最近搜尋 ────────────────────────────────────────────────
+    recentSave(name, sid);
+
+    // ── 比較按鈕 ────────────────────────────────────────────────
+    // 儲存本次結果供 compare 使用
+    _lastEstimate = { name, sid, d, area:parseFloat(document.getElementById('est_area').value)||0 };
+    const cmpBtn = document.getElementById('btn_add_cmp');
+    const alreadyIn = _cmpList.some(c => c.name === name);
+    cmpBtn.style.display = '';
+    cmpBtn.textContent   = alreadyIn ? '✔ 已在比較清單' : `＋ 加入比較（${_cmpList.length}/2 個）`;
+    cmpBtn.disabled      = alreadyIn || _cmpList.length >= 2;
+
   } catch(e) {
     box.innerHTML = '<div style="color:#c0392b;text-align:center;">查詢失敗，請稍後再試</div>';
     document.getElementById('est_trend_wrap').style.display = 'none';
+    document.getElementById('btn_add_cmp').style.display = 'none';
   }
 }
 
@@ -1668,6 +1807,168 @@ async function renderTrendChart(name, sid) {
   } catch(e) {
     wrap.style.display = 'none';
   }
+}
+
+// ══ 最近搜尋（localStorage）══════════════════════════════════════════════
+const RECENT_KEY = 'est_recent_v1';
+const RECENT_MAX = 6;
+function recentLoad() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(e) { return []; }
+}
+function recentSave(name, sid) {
+  let list = recentLoad().filter(x => x.name !== name);
+  list.unshift({ name, sid: sid || '' });
+  list = list.slice(0, RECENT_MAX);
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(list)); } catch(e) {}
+  recentRender();
+}
+function recentRender() {
+  const list  = recentLoad();
+  const wrap  = document.getElementById('est_recent_wrap');
+  const chips = document.getElementById('est_recent_chips');
+  if (!list.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  chips.innerHTML = list.map(x =>
+    `<span class="recent-chip" onclick="recentPick(${JSON.stringify(x.name)},${JSON.stringify(x.sid)})">${x.name}</span>`
+  ).join('');
+}
+function recentPick(name, sid) {
+  document.getElementById('est_community').value = name;
+  document.getElementById('est_sid').value = sid || '';
+  doEstimate();
+}
+// 頁面載入後顯示最近搜尋
+recentRender();
+
+// ══ 社區比較 ══════════════════════════════════════════════════════════════
+let _cmpList    = []; // [{name, sid, d, area}]
+let _lastEstimate = null;
+function cmpAdd() {
+  if (!_lastEstimate) return;
+  const { name, sid, d, area } = _lastEstimate;
+  if (_cmpList.length >= 2 || _cmpList.some(c => c.name === name)) return;
+  _cmpList.push({ name, sid, d, area });
+  cmpRender();
+  // 更新按鈕
+  const cmpBtn = document.getElementById('btn_add_cmp');
+  cmpBtn.textContent = '✔ 已在比較清單';
+  cmpBtn.disabled    = true;
+}
+function cmpRemove(idx) {
+  _cmpList.splice(idx, 1);
+  cmpRender();
+  // 恢復加入按鈕（若當前估價結果名稱被移除了）
+  if (_lastEstimate) {
+    const cmpBtn = document.getElementById('btn_add_cmp');
+    const alreadyIn = _cmpList.some(c => c.name === _lastEstimate.name);
+    cmpBtn.style.display = _lastEstimate ? '' : 'none';
+    cmpBtn.textContent   = alreadyIn ? '✔ 已在比較清單' : `＋ 加入比較（${_cmpList.length}/2 個）`;
+    cmpBtn.disabled      = alreadyIn || _cmpList.length >= 2;
+  }
+}
+function cmpClear() {
+  _cmpList = [];
+  cmpRender();
+  if (_lastEstimate) {
+    const cmpBtn = document.getElementById('btn_add_cmp');
+    cmpBtn.textContent = `＋ 加入比較（0/2 個）`;
+    cmpBtn.disabled    = false;
+  }
+}
+function cmpRender() {
+  const panel = document.getElementById('est_cmp_panel');
+  const grid  = document.getElementById('est_cmp_grid');
+  if (!_cmpList.length) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  const cols = _cmpList.map((c, i) => {
+    const d  = c.d;
+    const avgP = parseFloat(d.avg_unit_price) || 0;
+    const q1   = d.q1 ?? (avgP * 0.95).toFixed(1);
+    const q3   = d.q3 ?? (avgP * 1.05).toFixed(1);
+    const tag  = d.is_presale ? '🏗 預售屋' : '🏠 成屋';
+    const txInfo = d.tx_count > 0
+      ? `${d.tx_count} 筆`
+      : `周遭 ${d.tx_nearby||0} 筆`;
+    return `<div class="cmp-col">
+      <button class="cmp-remove" onclick="cmpRemove(${i})" title="移除">✕</button>
+      <div class="cmp-col-name">${c.name}</div>
+      <div class="cmp-row"><span>近2年均價</span><span>${avgP} 萬/坪</span></div>
+      <div class="cmp-row"><span>區間</span><span>${q1}–${q3} 萬</span></div>
+      <div class="cmp-row"><span>成交筆數</span><span>${txInfo}</span></div>
+      <div class="cmp-row"><span>最新成交</span><span>${d.latest_date||'—'}</span></div>
+      <div class="cmp-row"><span>類型</span><span>${tag}</span></div>
+    </div>`;
+  });
+  // 若只有1個，加空格佔位
+  if (cols.length === 1) cols.push(`<div class="cmp-empty">再查詢一個社區<br>點「＋ 加入比較」</div>`);
+  grid.innerHTML = cols.join('');
+}
+
+// ══ 租金投報率 ══════════════════════════════════════════════════════════════
+function calcYield() {
+  const price    = parseFloat(document.getElementById('yi_price').value) || 0;
+  const rent     = parseFloat(document.getElementById('yi_rent').value)  || 0;
+  const assessed = parseFloat(document.getElementById('yi_assessed').value) || 0;
+  const landval  = parseFloat(document.getElementById('yi_landval').value)  || 0;
+  const repairPct= parseFloat(document.getElementById('yi_repair').value)   || 10;
+  const box = document.getElementById('yi_result');
+  if (!price || !rent) { box.classList.remove('show'); return; }
+  const annRent  = rent * 12;
+  const grossYld = annRent / (price * 10000) * 100;
+  const tax_house  = assessed > 0 ? assessed * 10000 * 0.012 : 0;
+  const tax_land   = landval  > 0 ? landval  * 10000 * 0.001 : 0;
+  const repair     = rent * (repairPct / 100) * 12;
+  const netAnn     = annRent - tax_house - tax_land - repair;
+  const netYld     = netAnn / (price * 10000) * 100;
+  const payback    = netYld > 0 ? (100 / netYld).toFixed(1) : '—';
+  const yldClass   = netYld >= 4 ? 'yield-good' : netYld >= 2.5 ? 'yield-ok' : 'yield-low';
+  const fmtM = v => (v/10000).toFixed(2) + ' 萬';
+  box.classList.add('show');
+  box.style.background = 'linear-gradient(135deg,#f0fdf4,#dcfce7)';
+  box.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.7rem;">
+      <div style="text-align:center;background:#fff;border-radius:8px;padding:.6rem;">
+        <div style="font-size:.68rem;color:var(--mute);">毛投報率</div>
+        <div class="yield-badge ${grossYld>=4?'yield-good':grossYld>=2.5?'yield-ok':'yield-low'}">${grossYld.toFixed(2)}%</div>
+      </div>
+      <div style="text-align:center;background:#fff;border-radius:8px;padding:.6rem;">
+        <div style="font-size:.68rem;color:var(--mute);">淨投報率</div>
+        <div class="yield-badge ${yldClass}">${netYld.toFixed(2)}%</div>
+      </div>
+    </div>
+    <div class="result-row"><span>年租金收入</span><span>${fmtM(annRent)}</span></div>
+    ${tax_house>0?`<div class="result-row"><span>房屋稅（評定現值×1.2%）</span><span>−${fmtM(tax_house)}</span></div>`:''}
+    ${tax_land >0?`<div class="result-row"><span>地價稅（土地現值×0.1%）</span><span>−${fmtM(tax_land)}</span></div>`:''}
+    <div class="result-row"><span>修繕準備金（${repairPct}%）</span><span>−${fmtM(repair)}</span></div>
+    <div class="result-row"><span>年淨收益</span><span>${fmtM(netAnn)}</span></div>
+    <div class="result-row"><span>回本年數（淨）</span><span style="color:#c0392b;font-weight:700;">${payback} 年</span></div>
+    <div style="font-size:.67rem;color:${netYld>=4?'#15803d':netYld>=2.5?'#b8922a':'#b91c1c'};margin-top:.5rem;font-weight:700;">
+      ${netYld>=4?'✅ 投報率佳，具投資吸引力':netYld>=2.5?'⚠ 投報率中等，請評估風險':'❌ 投報率偏低，需審慎考量'}
+    </div>
+    ${!assessed&&!landval?`<div style="font-size:.63rem;color:var(--mute);margin-top:.3rem;">💡 填入房屋評定現值 / 公告地價可計算更精確的淨投報率</div>`:''}
+  `;
+}
+
+// ══ 換算工具快速帶入 ══════════════════════════════════════════════════════
+function xfUpdate() {
+  // 即時試算（可選：自動 trigger 對應計算機）
+}
+function xfFill(target) {
+  const price    = document.getElementById('xf_price').value;
+  const cost     = document.getElementById('xf_cost').value;
+  const prevLand = document.getElementById('xf_prev_land').value;
+  const currLand = document.getElementById('xf_curr_land').value;
+  // 切換到目標 tab
+  const tabMap = { mortgage:'房貸試算', land:'房地合一', landval:'土地增值稅', fees:'買賣雜費', yield:'租金投報' };
+  const tabBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.textContent.trim().includes(tabMap[target]));
+  if (tabBtn) switchTab(target, tabBtn);
+  // 填入值
+  const s = (id, val) => { if (val) { const el = document.getElementById(id); if(el) el.value = val; } };
+  if (target === 'mortgage') { s('m_loan', price); }
+  if (target === 'land')     { s('l_sell', price); s('l_cost', cost || ''); }
+  if (target === 'landval')  { s('lv_prev', prevLand); s('lv_curr', currLand); if(prevLand&&currLand) lvCalc(); }
+  if (target === 'fees')     { s('f_price', price); }
+  if (target === 'yield')    { s('yi_price', price); if(price) calcYield(); }
 }
 
 // 點擊其他地方時收起建議清單
