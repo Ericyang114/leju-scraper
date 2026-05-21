@@ -582,18 +582,22 @@
 // ── 生活機能 POI ───────────────────────────────────────────────
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
 const OVERPASS  = 'https://overpass-api.de/api/interpreter';
+// 分兩批平行查詢：批次A（重要/常查）、批次B（補充）
 const LIFE_CATS = [
-  {key:'hospital',emoji:'🏥',label:'醫療院所',  q:`node["amenity"~"hospital|clinic|pharmacy"](around:800,LAT,LON);`},
-  {key:'school',  emoji:'🏫',label:'學校',      q:`node["amenity"~"school|kindergarten|university|college"](around:1000,LAT,LON);way["amenity"~"school|kindergarten|university|college"](around:1000,LAT,LON);`},
-  {key:'super',   emoji:'🏪',label:'便利商店',   q:`node["shop"="convenience"](around:500,LAT,LON);`},
-  {key:'mall',    emoji:'🛒',label:'超市/量販店',q:`node["shop"~"supermarket|wholesale"](around:3000,LAT,LON);way["shop"~"supermarket|wholesale"](around:3000,LAT,LON);relation["shop"~"supermarket|wholesale"](around:3000,LAT,LON);`},
-  {key:'dept',    emoji:'🏬',label:'百貨/商場',  q:`node["shop"~"department_store|mall"](around:3000,LAT,LON);way["shop"~"department_store|mall"](around:3000,LAT,LON);relation["shop"~"department_store|mall"](around:3000,LAT,LON);`},
-  {key:'tmarket', emoji:'🥬',label:'傳統市場',   q:`node["amenity"="marketplace"](around:800,LAT,LON);way["amenity"="marketplace"](around:800,LAT,LON);`},
-  {key:'bus',     emoji:'🚌',label:'公車站牌',   q:`node["highway"="bus_stop"](around:400,LAT,LON);`},
-  {key:'mrt',     emoji:'🚇',label:'捷運/火車站',q:`node["railway"~"station|subway_entrance"](around:1500,LAT,LON);`},
-  {key:'park',    emoji:'🌳',label:'公園',       q:`node["leisure"="park"](around:600,LAT,LON);way["leisure"="park"](around:600,LAT,LON);`},
+  // ── 批次 A ──────────────────────────────────────────────────
+  {key:'hospital',emoji:'🏥',label:'醫療院所',  batch:'A', q:`node["amenity"~"hospital|clinic|pharmacy"](around:800,LAT,LON);`},
+  {key:'school',  emoji:'🏫',label:'學校',      batch:'A', q:`node["amenity"~"school|kindergarten|university|college"](around:1000,LAT,LON);way["amenity"~"school|kindergarten|university|college"](around:1000,LAT,LON);`},
+  {key:'super',   emoji:'🏪',label:'便利商店',   batch:'A', q:`node["shop"="convenience"](around:500,LAT,LON);`},
+  {key:'bus',     emoji:'🚌',label:'公車站牌',   batch:'A', q:`node["highway"="bus_stop"](around:400,LAT,LON);`},
+  {key:'mrt',     emoji:'🚇',label:'捷運/火車站',batch:'A', q:`node["railway"~"station|subway_entrance"](around:1500,LAT,LON);`},
+  // ── 批次 B ──────────────────────────────────────────────────
+  {key:'mall',    emoji:'🛒',label:'超市/量販店',batch:'B', q:`node["shop"~"supermarket|wholesale"](around:3000,LAT,LON);way["shop"~"supermarket|wholesale"](around:3000,LAT,LON);relation["shop"~"supermarket|wholesale"](around:3000,LAT,LON);`},
+  {key:'dept',    emoji:'🏬',label:'百貨/商場',  batch:'B', q:`node["shop"~"department_store|mall"](around:3000,LAT,LON);way["shop"~"department_store|mall"](around:3000,LAT,LON);relation["shop"~"department_store|mall"](around:3000,LAT,LON);`},
+  {key:'tmarket', emoji:'🥬',label:'傳統市場',   batch:'B', q:`node["amenity"="marketplace"](around:800,LAT,LON);way["amenity"="marketplace"](around:800,LAT,LON);`},
+  {key:'parking', emoji:'🅿️', label:'停車場',    batch:'B', q:`node["amenity"="parking"](around:600,LAT,LON);way["amenity"="parking"](around:600,LAT,LON);`},
+  {key:'park',    emoji:'🌳',label:'公園',       batch:'B', q:`node["leisure"="park"](around:600,LAT,LON);way["leisure"="park"](around:600,LAT,LON);`},
 ];
-const LIFE_COLORS={hospital:'#ef4444',school:'#f59e0b',super:'#10b981',mall:'#0891b2',dept:'#7c3aed',tmarket:'#d97706',bus:'#3b82f6',mrt:'#8b5cf6',park:'#22c55e'};
+const LIFE_COLORS={hospital:'#ef4444',school:'#f59e0b',super:'#10b981',mall:'#0891b2',dept:'#7c3aed',tmarket:'#d97706',parking:'#6b7280',bus:'#3b82f6',mrt:'#8b5cf6',park:'#22c55e'};
 let lifeMap=null, lifeMarkers=[], lifeAcTimer=null;
 
 function lifeSetStatus(cls,html){const el=document.getElementById('lifeStatus');el.className='life-status '+cls;el.innerHTML=html;}
@@ -646,11 +650,32 @@ function lifeAddMarkers(byCat){
   }));
 }
 async function lifeFetchPOI(lat,lon){
-  const allQ=LIFE_CATS.map(c=>c.q.replaceAll('LAT',lat).replaceAll('LON',lon)).join('\n');
-  const q=`[out:json][timeout:25];\n(\n${allQ}\n);\nout center body;`;
-  const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),28000);
-  const r=await fetch(OVERPASS,{method:'POST',body:'data='+encodeURIComponent(q),signal:ctrl.signal});
-  return await r.json();
+  // sessionStorage cache：以小數點後3位四捨五入為 key（約100m精度）
+  const ckey='poi_'+lat.toFixed(3)+'_'+lon.toFixed(3);
+  try{
+    const cached=sessionStorage.getItem(ckey);
+    if(cached){const d=JSON.parse(cached);if(d&&d.elements)return d;}
+  }catch(e){}
+
+  // 分兩批平行查詢
+  const makeQ=(cats)=>{
+    const body=cats.map(c=>c.q.replaceAll('LAT',lat).replaceAll('LON',lon)).join('\n');
+    return `[out:json][timeout:25];\n(\n${body}\n);\nout center body;`;
+  };
+  const catsA=LIFE_CATS.filter(c=>c.batch==='A');
+  const catsB=LIFE_CATS.filter(c=>c.batch==='B');
+  const ctrlA=new AbortController(),ctrlB=new AbortController();
+  const tA=setTimeout(()=>ctrlA.abort(),28000),tB=setTimeout(()=>ctrlB.abort(),28000);
+  try{
+    const [rA,rB]=await Promise.all([
+      fetch(OVERPASS,{method:'POST',body:'data='+encodeURIComponent(makeQ(catsA)),signal:ctrlA.signal}),
+      fetch(OVERPASS,{method:'POST',body:'data='+encodeURIComponent(makeQ(catsB)),signal:ctrlB.signal}),
+    ]);
+    const [dA,dB]=await Promise.all([rA.json(),rB.json()]);
+    const merged={elements:[...(dA.elements||[]),...(dB.elements||[])]};
+    try{sessionStorage.setItem(ckey,JSON.stringify(merged));}catch(e){}
+    return merged;
+  }finally{clearTimeout(tA);clearTimeout(tB);}
 }
 function lifeParsePOI(els,cLat,cLon){
   const byCat={};LIFE_CATS.forEach(c=>{byCat[c.key]=[];});
@@ -672,6 +697,7 @@ function lifeParsePOI(els,cLat,cLon){
     else if(t.amenity==='marketplace')byCat.tmarket.push({name,d,lat:el.lat,lon:el.lon});
     else if(t.highway==='bus_stop')byCat.bus.push({name,d,lat:el.lat,lon:el.lon});
     else if(t.railway)byCat.mrt.push({name,d,lat:el.lat,lon:el.lon});
+    else if(t.amenity==='parking')byCat.parking.push({name,d,lat:el.lat,lon:el.lon});
     else if(t.leisure==='park')byCat.park.push({name,d,lat:el.lat,lon:el.lon});
   });
   Object.keys(byCat).forEach(k=>byCat[k].sort((a,b)=>a.d-b.d));
