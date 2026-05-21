@@ -908,12 +908,30 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
 
     avg_p = wsum / wt
 
-    # ── 車位統計 ───────────────────────────────────────────────────
+    # ── 車位統計（2年窗口無資料時往前查全期歷史）─────────────────
     p_prices, p_areas = [], []
     for r in c_rows:
         pp, pa = r["parking_price"] or 0, r["parking_area"] or 0
         if pp > 0 and pa > 0:
             p_prices.append(pp); p_areas.append(pa)
+
+    if not p_prices:
+        # 往前查同社區歷史全期車位資料（不限日期）
+        pk_cl = [f"community={PH}", "parking_price>0", "parking_area>0",
+                 "(is_special_trade IS NULL OR is_special_trade=0)"]
+        pk_p  = [name]
+        if sid:
+            pk_cl.append(f"sid={PH}"); pk_p.append(sid)
+        with get_conn() as conn:
+            pk_rows = _rows(conn, f"""
+                SELECT parking_price, parking_area FROM transactions
+                WHERE {" AND ".join(pk_cl)}
+                ORDER BY transaction_date DESC LIMIT 50
+            """, pk_p)
+        for r in pk_rows:
+            pp, pa = r["parking_price"] or 0, r["parking_area"] or 0
+            if pp > 0 and pa > 0:
+                p_prices.append(pp); p_areas.append(pa)
 
     filtered_vals = sorted(p for p, _ in c_prices)
     latest = (c_rows or c_rows_all)[0]["transaction_date"]
