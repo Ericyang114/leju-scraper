@@ -583,14 +583,16 @@
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
 const OVERPASS  = 'https://overpass-api.de/api/interpreter';
 const LIFE_CATS = [
-  {key:'hospital',emoji:'🏥',label:'醫療院所', q:`node["amenity"~"hospital|clinic|pharmacy"](around:800,LAT,LON);`},
-  {key:'school',  emoji:'🏫',label:'學校',     q:`node["amenity"~"school|kindergarten|university"](around:800,LAT,LON);`},
-  {key:'market',  emoji:'🛒',label:'超市/商店',q:`node["shop"~"supermarket|convenience|market"](around:600,LAT,LON);`},
-  {key:'bus',     emoji:'🚌',label:'公車站牌', q:`node["highway"="bus_stop"](around:400,LAT,LON);`},
+  {key:'hospital',emoji:'🏥',label:'醫療院所',  q:`node["amenity"~"hospital|clinic|pharmacy"](around:800,LAT,LON);`},
+  {key:'school',  emoji:'🏫',label:'學校',      q:`node["amenity"~"school|kindergarten|university"](around:800,LAT,LON);`},
+  {key:'super',   emoji:'🏪',label:'超市/便利店',q:`node["shop"~"supermarket|convenience"](around:600,LAT,LON);`},
+  {key:'mall',    emoji:'🛒',label:'賣場/量販店',q:`node["shop"~"wholesale|department_store|mall"](around:2000,LAT,LON);way["shop"~"wholesale|department_store|mall"](around:2000,LAT,LON);`},
+  {key:'tmarket', emoji:'🥬',label:'傳統市場',   q:`node["amenity"="marketplace"](around:800,LAT,LON);way["amenity"="marketplace"](around:800,LAT,LON);`},
+  {key:'bus',     emoji:'🚌',label:'公車站牌',   q:`node["highway"="bus_stop"](around:400,LAT,LON);`},
   {key:'mrt',     emoji:'🚇',label:'捷運/火車站',q:`node["railway"~"station|subway_entrance"](around:1500,LAT,LON);`},
-  {key:'park',    emoji:'🌳',label:'公園',     q:`node["leisure"="park"](around:600,LAT,LON);way["leisure"="park"](around:600,LAT,LON);`},
+  {key:'park',    emoji:'🌳',label:'公園',       q:`node["leisure"="park"](around:600,LAT,LON);way["leisure"="park"](around:600,LAT,LON);`},
 ];
-const LIFE_COLORS={hospital:'#ef4444',school:'#f59e0b',market:'#10b981',bus:'#3b82f6',mrt:'#8b5cf6',park:'#22c55e'};
+const LIFE_COLORS={hospital:'#ef4444',school:'#f59e0b',super:'#10b981',mall:'#0891b2',tmarket:'#d97706',bus:'#3b82f6',mrt:'#8b5cf6',park:'#22c55e'};
 let lifeMap=null, lifeMarkers=[], lifeAcTimer=null;
 
 function lifeSetStatus(cls,html){const el=document.getElementById('lifeStatus');el.className='life-status '+cls;el.innerHTML=html;}
@@ -644,8 +646,8 @@ function lifeAddMarkers(byCat){
 }
 async function lifeFetchPOI(lat,lon){
   const allQ=LIFE_CATS.map(c=>c.q.replaceAll('LAT',lat).replaceAll('LON',lon)).join('\n');
-  const q=`[out:json][timeout:15];\n(\n${allQ}\n);\nout body;`;
-  const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),12000);
+  const q=`[out:json][timeout:25];\n(\n${allQ}\n);\nout body;`;
+  const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),28000);
   const r=await fetch(OVERPASS,{method:'POST',body:'data='+encodeURIComponent(q),signal:ctrl.signal});
   return await r.json();
 }
@@ -659,7 +661,9 @@ function lifeParsePOI(els,cLat,cLon){
     const t=el.tags||{};
     if(t.amenity==='hospital'||t.amenity==='clinic'||t.amenity==='pharmacy')byCat.hospital.push({name,d,lat:el.lat,lon:el.lon});
     else if(t.amenity==='school'||t.amenity==='kindergarten'||t.amenity==='university')byCat.school.push({name,d,lat:el.lat,lon:el.lon});
-    else if(t.shop)byCat.market.push({name,d,lat:el.lat,lon:el.lon});
+    else if(t.shop==='supermarket'||t.shop==='convenience')byCat.super.push({name,d,lat:el.lat,lon:el.lon});
+    else if(t.shop==='wholesale'||t.shop==='department_store'||t.shop==='mall')byCat.mall.push({name,d,lat:el.lat,lon:el.lon});
+    else if(t.amenity==='marketplace')byCat.tmarket.push({name,d,lat:el.lat,lon:el.lon});
     else if(t.highway==='bus_stop')byCat.bus.push({name,d,lat:el.lat,lon:el.lon});
     else if(t.railway)byCat.mrt.push({name,d,lat:el.lat,lon:el.lon});
     else if(t.leisure==='park')byCat.park.push({name,d,lat:el.lat,lon:el.lon});
@@ -695,12 +699,12 @@ async function lifeSearchByName(){
       const cd=await cr.json();
       if(cd.lat&&cd.lon){lat=cd.lat;lon=cd.lon;coordSrc='db';}
     }
-    // 定位策略 ② Nominatim fallback（地址 → 社區名＋桃園市 → 社區名＋桃園）
+    // 定位策略 ② Nominatim fallback（地址 → 社區名 → 社區名＋台灣）
     if(!lat){
       const queries=[];
       if(_lifeAddr) queries.push(_lifeAddr);
-      queries.push(name+' 桃園市桃園區');
-      queries.push(name+' 桃園');
+      queries.push(name+' 台灣');
+      queries.push(name);
       for(const q of queries){
         const r=await fetch(`${NOMINATIM}?q=${encodeURIComponent(q)}&format=json&limit=1`,{headers:{'User-Agent':'LeJu/1.0','Accept-Language':'zh-TW'}});
         const geo=await r.json();
