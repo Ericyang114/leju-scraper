@@ -220,6 +220,19 @@
 
       <div class="section-label mb-3">桃園市 · 選擇行政區</div>
       <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2" id="pv-district-grid"></div>
+
+      <!-- 新北市鶯歌區（有資料時才顯示） -->
+      <div id="pv-yingge-section" style="display:none;">
+        <a href="/price/鶯歌區" class="d-flex align-items-center justify-content-between mt-4 mb-3 px-3 py-2 text-decoration-none"
+           style="background:linear-gradient(135deg,#2c0a0a,#7f1d1d);border-radius:10px;color:#fff;">
+          <div>
+            <div style="font-size:.8rem;font-weight:700;letter-spacing:.03em;">🏘 新北市 · 鶯歌區實價登錄</div>
+            <div style="font-size:.68rem;opacity:.75;margin-top:.15rem;">鶯歌 · 鳳鳴重劃區 · 桃園市區約 15 分鐘</div>
+          </div>
+          <div style="font-size:.8rem;opacity:.8;white-space:nowrap;padding-left:.8rem;">查看 →</div>
+        </a>
+        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2" id="pv-yingge-grid"></div>
+      </div>
     </div>
 
     <!-- 第二層：選生活圈 -->
@@ -900,6 +913,27 @@ function pvShowDistricts() {
 }
 
 pvRenderDistricts();
+
+// ── 新北市鶯歌區 ──
+function pvRenderYingge() {
+  const ygSubs = _PV_STATS.filter(s => s.post_code === '239');
+  if (!ygSubs.length) return;
+  document.getElementById('pv-yingge-section').style.display = '';
+  document.getElementById('pv-yingge-grid').innerHTML = ygSubs.map(s =>
+    `<div class="col"><a class="sa-card h-100" href="/subarea/${s.sid}" style="border-top-color:#c0392b;">
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="sa-name">${s.name}</div>
+        <span class="badge-cnt" style="background:#fff0f0;color:#c0392b;">${s.tx_count}筆</span>
+      </div>
+      ${s.avg_unit_price
+        ? `<div class="sa-price">${Number(s.avg_unit_price).toFixed(1)}<span class="sa-pu"> 萬/坪</span></div>
+           <div class="sa-range"><span style="color:#c0392b;">▲ ${s.max_unit_price}</span> &nbsp;<span style="color:#27ae60;">▼ ${s.min_unit_price}</span> &nbsp;<span style="font-size:.63rem;color:var(--mute);">近3年均價</span></div>`
+        : '<div class="sa-price" style="font-size:.85rem;color:var(--mute);">暫無資料</div>'}
+      <div class="sa-meta"><span>最新：${s.latest_date||'—'}</span><span style="color:#c0392b;font-weight:600;">查看 ›</span></div>
+    </a></div>`
+  ).join('');
+}
+pvRenderYingge();
 
 // ── 坪數換算 ──
 function pingToM2() {

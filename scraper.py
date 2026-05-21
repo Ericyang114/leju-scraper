@@ -23,6 +23,11 @@ CITY_CODE = "H"
 CITY_NAME = "桃園市"
 SEED_SID  = 11019   # 小檜溪重劃區，用於暖機 CF session
 
+# 新北市鶯歌區
+NTPC_CITY_CODE  = "F"
+NTPC_CITY_NAME  = "新北市"
+YINGGE_DISTRICT = {"name": "鶯歌區", "post_code": "239"}
+
 # 桃園市各行政區（名稱 → 郵遞區號）
 TAOYUAN_DISTRICTS = [
     {"name": "桃園區", "post_code": "330"},
@@ -171,11 +176,13 @@ def _query_once(
     date_start: str,
     date_end: str,
     post_code: str = "330",
+    city_code: str = CITY_CODE,
+    city_name: str = CITY_NAME,
 ) -> list[dict]:
     """單次 API 呼叫，最多回傳 _PER_PAGE 筆。"""
     params = {
-        "city_code":             CITY_CODE,
-        "city_name":             CITY_NAME,
+        "city_code":             city_code,
+        "city_name":             city_name,
         "post_code":             post_code,
         "tag":                   31,
         "tag_id":                sid,
@@ -219,12 +226,14 @@ def _fetch_range(
     date_end: str,
     depth: int = 0,
     post_code: str = "330",
+    city_code: str = CITY_CODE,
+    city_name: str = CITY_NAME,
 ) -> list[dict]:
     """抓取日期範圍內的所有資料。
     若回傳剛好 _PER_PAGE 筆（可能被截斷），自動對半拆分再遞迴查詢，
     直到每段結果 < _PER_PAGE 筆或已縮小至單日為止。
     """
-    records = _query_once(s, sid, name, date_start, date_end, post_code)
+    records = _query_once(s, sid, name, date_start, date_end, post_code, city_code, city_name)
 
     # 結果不足上限，或已達最大遞迴深度（防護），直接回傳
     if len(records) < _PER_PAGE or depth >= 6:
@@ -244,13 +253,12 @@ def _fetch_range(
     mid_d  = start_d + (end_d - start_d) // 2
     next_d = mid_d + timedelta(days=1)
 
-    log.debug("  sid=%s 區間 %s~%s 達上限，拆分查詢 (depth=%d)",
-              sid, date_start, date_end, depth)
+    log.debug("  sid=%s 區間 %s~%s 達上限，拆分查詢 (depth=%d)", sid, date_start, date_end, depth)
 
     time.sleep(0.25)
-    left  = _fetch_range(s, sid, name, date_start,             mid_d.strftime("%Y-%m-%d"), depth + 1, post_code)
+    left  = _fetch_range(s, sid, name, date_start, mid_d.strftime("%Y-%m-%d"), depth + 1, post_code, city_code, city_name)
     time.sleep(0.25)
-    right = _fetch_range(s, sid, name, next_d.strftime("%Y-%m-%d"), date_end,              depth + 1, post_code)
+    right = _fetch_range(s, sid, name, next_d.strftime("%Y-%m-%d"), date_end,  depth + 1, post_code, city_code, city_name)
 
     # 合併並去重（同 id 只保留一筆）
     seen: set = set()
@@ -286,6 +294,8 @@ def fetch_subarea_by_months(
     name: str,
     date_start: str,
     post_code: str = "330",
+    city_code: str = CITY_CODE,
+    city_name: str = CITY_NAME,
 ) -> list[dict]:
     """以月份遍歷方式抓取生活圈所有交易資料。
     若某月超過 20 筆（API 上限），自動對半拆分確保不漏抓。
@@ -295,7 +305,7 @@ def fetch_subarea_by_months(
     all_records: list = []
 
     for d_start, d_end in ranges:
-        records = _fetch_range(s, sid, name, d_start, d_end, post_code=post_code)
+        records = _fetch_range(s, sid, name, d_start, d_end, post_code=post_code, city_code=city_code, city_name=city_name)
         if records:
             all_records.extend(records)
             log.info("  %-16s %s ~ %s  → %d 筆", name, d_start, d_end, len(records))
@@ -384,6 +394,39 @@ def scrape() -> bool:
                 total_records += len(records)
 
         time.sleep(1)  # 換區之間稍作停頓
+
+    # ── 新北市鶯歌區 ──────────────────────────────────────────────
+    log.info("=== 新北市：%s (post_code=%s) ===", YINGGE_DISTRICT["name"], YINGGE_DISTRICT["post_code"])
+    try:
+        yg_session  = make_session()   # 新北市獨立 session
+        yg_subareas = fetch_subareas(yg_session, YINGGE_DISTRICT["post_code"])
+        if yg_subareas:
+            db.upsert_subareas(yg_subareas)
+            total_subareas += len(yg_subareas)
+            log.info("鶯歌區找到 %d 個生活圈", len(yg_subareas))
+            for sa in yg_subareas:
+                latest = db.get_subarea_latest_date(sa["sid"])
+                date_start = _to_iso_date(latest)
+                if date_start:
+                    date_start = (
+                        datetime.strptime(date_start, "%Y-%m-%d") - timedelta(days=30)
+                    ).strftime("%Y-%m-%d")
+                    log.info("  %s 增量更新，從 %s 起", sa["name"], date_start)
+                else:
+                    date_start = FULL_SCRAPE_FROM
+                    log.info("  %s 首次全量抓取，從 %s 起", sa["name"], date_start)
+                records = fetch_subarea_by_months(
+                    yg_session, sa["sid"], sa["name"], date_start,
+                    post_code=YINGGE_DISTRICT["post_code"],
+                    city_code=NTPC_CITY_CODE, city_name=NTPC_CITY_NAME,
+                )
+                if records:
+                    db.upsert_transactions(records)
+                    total_records += len(records)
+        else:
+            log.info("鶯歌區無生活圈資料")
+    except Exception as exc:
+        log.warning("鶯歌區爬取失敗: %s，跳過", exc)
 
     msg = f"完成：{total_subareas} 個生活圈，共 {total_records} 筆交易"
     log.info("=== %s ===", msg)

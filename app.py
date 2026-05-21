@@ -76,6 +76,10 @@ TAOYUAN_DISTRICTS = [
     {"name": "復興區", "post_code": "336"},
 ]
 
+NTPC_DISTRICTS = [
+    {"name": "鶯歌區", "post_code": "239"},
+]
+
 _POST_CODE_MAP = {d["post_code"]: d["name"] for d in TAOYUAN_DISTRICTS}
 
 DISTRICT_INFO = {
@@ -159,6 +163,15 @@ DISTRICT_INFO = {
     },
 }
 
+NTPC_DISTRICT_INFO = {
+    "鶯歌區": {
+        "intro": "鶯歌區以陶瓷藝術聞名全台，是台灣最具代表性的陶瓷產業重鎮。近年鳳鳴重劃區快速發展，規劃完整的住宅社區吸引首購族與換屋族進駐，與桃園市區車程約 15 分鐘，房價相對親民，深受三鶯生活圈居民青睞。",
+        "traffic": "台鐵鶯歌站提供北上板橋（約 20 分鐘）、南下桃園（約 10 分鐘）的通勤選擇；國道 3 號鶯歌交流道銜接南北高速公路；台 4 線連接桃園市區，對外交通十分便利。",
+        "school": "鶯歌國中、鶯歌工商為主要學校；國立鶯歌工業高級中等學校以陶瓷工藝教育著名；鳳鳴重劃區內鳳鳴國小為新興社區學區，生活化的校園規劃廣受家長好評。",
+        "life": "鶯歌老街陶瓷商圈、新北市立鶯歌陶瓷博物館為著名景點；鳳鳴重劃區商業機能持續完善，便利商店、餐飲店家陸續進駐；距桃園市區、三峽均在 15 分鐘車程內，日常生活便利。",
+    },
+}
+
 
 # ── 路由 ──────────────────────────────────────────────────────────────────────
 
@@ -190,16 +203,27 @@ def price_districts():
 
 @app.route("/price/<district_name>")
 def price_district(district_name):
-    """某行政區的生活圈列表。"""
+    """某行政區的生活圈列表（桃園市 + 新北市鶯歌區）。"""
+    # 先查桃園市
     d = next((x for x in TAOYUAN_DISTRICTS if x["name"] == district_name), None)
+    city = "桃園市"
+    info = DISTRICT_INFO.get(district_name)
+    back_url = "/price"
+    if not d:
+        # 再查新北市
+        d = next((x for x in NTPC_DISTRICTS if x["name"] == district_name), None)
+        city = "新北市"
+        info = NTPC_DISTRICT_INFO.get(district_name)
+        back_url = "/"
     if not d:
         return "找不到該行政區", 404
     stats = db.get_subareas_by_post_code(d["post_code"])
-    info  = DISTRICT_INFO.get(district_name)
     return render_template("district.html",
                            district_name=district_name,
                            stats=stats,
-                           info=info)
+                           info=info,
+                           city=city,
+                           back_url=back_url)
 
 
 @app.route("/dashboard")
