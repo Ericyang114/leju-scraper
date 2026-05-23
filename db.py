@@ -893,7 +893,8 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         n_cl_base = [f"sid={PH}", f"community!={PH}", "community IS NOT NULL",
                      "(is_special_trade IS NULL OR is_special_trade=0)",
                      "total_price>0", "total_area>0"]
-        n_cl, n_p = _build_date_clause(_date_cutoff, n_cl_base, [sid, name])
+        # 周遭永遠用近 2 年（反映當前市場），如果 2 年內沒有周遭資料再退到 3 年
+        n_cl, n_p = _build_date_clause(two_yr, n_cl_base, [sid, name])
 
     with get_conn() as conn:
         c_rows = _rows(conn, f"""
@@ -909,6 +910,15 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
                 FROM transactions WHERE {" AND ".join(n_cl)} {age_clause}
                 ORDER BY transaction_date DESC LIMIT 300
             """, n_p)
+            # 若周遭近 2 年也無資料，退到 3 年
+            if not n_rows:
+                n_cl2, n_p2 = _build_date_clause(_three_year_roc(), n_cl_base, [sid, name])
+                n_rows = _rows(conn, f"""
+                    SELECT total_price, total_area,
+                           parking_price, parking_area, transaction_date, age, building_type
+                    FROM transactions WHERE {" AND ".join(n_cl2)} {age_clause}
+                    ORDER BY transaction_date DESC LIMIT 300
+                """, n_p2)
 
     if not c_rows and not n_rows:
         return {"community": name, "tx_count": 0}
