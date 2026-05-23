@@ -1766,7 +1766,9 @@ async function doEstimate() {
         shareMsg += `，${area}坪估算約 ${est} 萬`;
       }
       shareMsg += `，最新成交 ${d.latest_date || '—'}`;
-      shareMsg += `\n老楊房快說 · 桃園房市行情查詢\nhttps://leju-scraper.onrender.com`;
+      // 直達連結：點開直接跳到該社區的行情試算
+      const directUrl = `https://leju-scraper.onrender.com/?q=${encodeURIComponent(name)}${sid ? '&sid=' + sid : ''}`;
+      shareMsg += `\n老楊房快說 · 桃園房市行情查詢\n${directUrl}`;
       _shareLineText = shareMsg;
       document.getElementById('btn_share_line').style.display = '';
     }
@@ -1821,6 +1823,21 @@ function recentPick(name, sid) {
 }
 // 頁面載入後顯示最近搜尋
 recentRender();
+
+// ── URL 參數自動帶入行情試算（LINE 分享直達連結）────────────────────────────
+(function(){
+  const p = new URLSearchParams(location.search);
+  const q = (p.get('q') || '').trim();
+  if (!q) return;
+  const sid = p.get('sid') || '';
+  // 切到行情試算 tab
+  const estBtn = document.querySelector('.tab-btn[onclick*="estimate"]');
+  if (estBtn) switchTab('estimate', estBtn);
+  // 填入欄位並執行試算
+  document.getElementById('est_community').value = q;
+  document.getElementById('est_sid').value = sid;
+  doEstimate();
+})();
 
 // ══ 社區比較 ══════════════════════════════════════════════════════════════
 let _cmpList    = []; // [{name, sid, d, area}]
