@@ -841,7 +841,9 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         """, c_p_all)
 
     # 若 2 年內無資料，往前擴展至 3 年（避免空白）
+    _used_fallback = False
     if not c_rows_all:
+        _used_fallback = True
         three_yr = _three_year_roc()
         c_p_all[-1 if not sid else -2] = three_yr  # 替換日期參數
         # 重新用正確方式替換
@@ -867,10 +869,13 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
     else:
         age_clause = "AND (age IS NULL OR age!='預售')"  # 成屋社區：排除預售
 
+    # 若 Step 1 使用了 3 年回溯，Step 2 也需跟進，否則仍回傳 tx_count=0
+    _date_cutoff = _three_year_roc() if _used_fallback else two_yr
+
     c_cl = [f"community={PH}",
             "(is_special_trade IS NULL OR is_special_trade=0)",
             f"transaction_date>={PH}", "total_price>0", "total_area>0"]
-    c_p  = [name, two_yr]
+    c_p  = [name, _date_cutoff]
     if sid:
         c_cl.append(f"sid={PH}"); c_p.append(sid)
 
@@ -879,7 +884,7 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         n_cl = [f"sid={PH}", f"community!={PH}", "community IS NOT NULL",
                 "(is_special_trade IS NULL OR is_special_trade=0)",
                 f"transaction_date>={PH}", "total_price>0", "total_area>0"]
-        n_p  = [sid, name, two_yr]
+        n_p  = [sid, name, _date_cutoff]
 
     with get_conn() as conn:
         c_rows = _rows(conn, f"""
