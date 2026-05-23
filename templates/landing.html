@@ -86,6 +86,15 @@
     .tab-btn.active{color:#fff;border-bottom-color:var(--gold2);background:rgba(255,255,255,.06);}
     .tab-btn.t-price.active{border-bottom-color:#5de8a8;color:#5de8a8;}
     .tab-btn.row2{border-top:1px solid rgba(255,255,255,.07);}
+    /* ── 手機版 tab 橫向捲動 ── */
+    @media(max-width:600px){
+      .tab-bar{display:flex;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+      .tab-bar::-webkit-scrollbar{display:none;}
+      .tab-btn{min-width:4.8rem;flex:0 0 auto;border-top:none!important;font-size:.68rem;padding:.5rem .35rem;}
+    }
+    /* ── LINE 分享按鈕 ── */
+    .btn-share-line{width:100%;margin-top:.55rem;background:#06c755;border:none;color:#fff;border-radius:8px;padding:.42rem .8rem;font-size:.8rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;transition:.12s;}
+    .btn-share-line:hover{background:#05b04b;}
     .panel{display:none;} .panel.active{display:block;}
 
     /* ── 懸浮 CTA ── */
@@ -687,6 +696,11 @@
       <div class="result-box" id="est_result"></div>
       <!-- 加入比較按鈕（估價後顯示） -->
       <button class="btn-add-cmp" id="btn_add_cmp" style="display:none;" onclick="cmpAdd()">＋ 加入比較（最多2個社區）</button>
+      <!-- LINE 分享按鈕（估價後顯示） -->
+      <button class="btn-share-line" id="btn_share_line" style="display:none;" onclick="shareEstimate()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+        分享給客戶
+      </button>
     </div>
     <!-- 社區比較面板 -->
     <div class="cmp-panel" id="est_cmp_panel" style="display:none;">
@@ -1541,9 +1555,16 @@ function fmt(n) { return isNaN(n) ? '—' : parseFloat(n.toFixed(2)).toLocaleStr
 function fmtNT(n) { return isNaN(n) ? '—' : '$' + Math.round(n).toLocaleString(); }
 
 // ── 行情試算 ──
-let _estTimer   = null;
-let _estParking = 0;       // 0=無, 1=1個, 2=2個
-let _estAreaType = 'with'; // 'with'=含車位, 'without'=不含
+let _estTimer    = null;
+let _estParking  = 0;       // 0=無, 1=1個, 2=2個
+let _estAreaType = 'with';  // 'with'=含車位, 'without'=不含
+let _shareLineText = '';
+
+function shareEstimate() {
+  if (!_shareLineText) return;
+  const url = 'https://line.me/R/msg/text/?' + encodeURIComponent(_shareLineText);
+  window.open(url, '_blank');
+}
 
 function setParkingCount(n) {
   _estParking = n;
@@ -1613,6 +1634,7 @@ async function doEstimate() {
   const box  = document.getElementById('est_result');
 
   document.getElementById('btn_add_cmp').style.display = 'none';
+  document.getElementById('btn_share_line').style.display = 'none';
   if (!name) {
     box.classList.add('show');
     box.innerHTML = '<div style="color:#c0392b;text-align:center;">請輸入社區名稱</div>';
@@ -1634,6 +1656,7 @@ async function doEstimate() {
         查無「${name}」及周遭生活圈的近2年成交記錄，請嘗試其他關鍵字
       </div>`;
           document.getElementById('btn_add_cmp').style.display = 'none';
+  document.getElementById('btn_share_line').style.display = 'none';
       return;
     }
 
@@ -1730,8 +1753,25 @@ async function doEstimate() {
     // ── 最近搜尋 ────────────────────────────────────────────────
     recentSave(name, sid);
 
+    // ── LINE 分享文字 ────────────────────────────────────────────
+    {
+      let shareMsg = `【${name}】近2年均價 ${avgP} 萬/坪`;
+      if (area > 0 && avgP > 0) {
+        const pkCount = _estParking;
+        const pkPrice = d.avg_parking_price || 0;
+        const pkArea  = d.avg_parking_area  || 0;
+        let houseArea = area;
+        if (pkCount > 0 && _estAreaType === 'with') houseArea = Math.max(area - pkArea * pkCount, 1);
+        const est = Math.round((houseArea * avgP + pkPrice * pkCount) * 10) / 10;
+        shareMsg += `，${area}坪估算約 ${est} 萬`;
+      }
+      shareMsg += `，最新成交 ${d.latest_date || '—'}`;
+      shareMsg += `\n老楊房快說 · 桃園房市行情查詢\nhttps://leju-scraper.onrender.com`;
+      _shareLineText = shareMsg;
+      document.getElementById('btn_share_line').style.display = '';
+    }
+
     // ── 比較按鈕 ────────────────────────────────────────────────
-    // 儲存本次結果供 compare 使用
     _lastEstimate = { name, sid, d, area:parseFloat(document.getElementById('est_area').value)||0 };
     const cmpBtn = document.getElementById('btn_add_cmp');
     const alreadyIn = _cmpList.some(c => c.name === name);
@@ -1742,6 +1782,7 @@ async function doEstimate() {
   } catch(e) {
     box.innerHTML = '<div style="color:#c0392b;text-align:center;">查詢失敗，請稍後再試</div>';
       document.getElementById('btn_add_cmp').style.display = 'none';
+  document.getElementById('btn_share_line').style.display = 'none';
   }
 }
 

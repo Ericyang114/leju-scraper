@@ -178,6 +178,32 @@
       margin: .3rem;
     }
 
+    .btn-print {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      background: rgba(255,255,255,.15);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.35);
+      font-size: .8rem;
+      font-weight: 600;
+      padding: .38rem 1rem;
+      border-radius: 20px;
+      cursor: pointer;
+      margin-top: .7rem;
+      text-decoration: none;
+      transition: .15s;
+    }
+    .btn-print:hover { background: rgba(255,255,255,.25); color: #fff; }
+
+    @media print {
+      .hero { background: #0f2744 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .btn-print, .cta-box, nav { display: none !important; }
+      .section-card { box-shadow: none !important; border: 1px solid #ddd; break-inside: avoid; }
+      body { background: #fff !important; }
+      .container { max-width: 100% !important; }
+    }
+
     .disclaimer {
       font-size: .68rem;
       color: #999;
@@ -202,6 +228,7 @@
     </nav>
     <h1>🔍 看屋注意事項完整清單</h1>
     <p class="sub">從看屋前功課、現場必問題目到修繕費用估算，幫你避開地雷屋</p>
+    <button class="btn-print" onclick="window.print()">🖨️ 列印 / 儲存 PDF</button>
   </div>
 </div>
 
