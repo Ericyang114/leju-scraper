@@ -1764,9 +1764,11 @@ function recentRender() {
   const chips = document.getElementById('est_recent_chips');
   if (!list.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = '';
-  chips.innerHTML = list.map(x =>
-    `<span class="recent-chip" onclick="recentPick(${JSON.stringify(x.name)},${JSON.stringify(x.sid)})">${x.name}</span>`
-  ).join('');
+  chips.innerHTML = list.map(x => {
+    const safeName = x.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    const safeSid  = String(x.sid || '').replace(/"/g,'');
+    return `<span class="recent-chip" data-name="${safeName}" data-sid="${safeSid}" onclick="recentPick(this.dataset.name,this.dataset.sid)">${x.name}</span>`;
+  }).join('');
 }
 function recentPick(name, sid) {
   // 確保切到行情試算 tab
