@@ -1,6 +1,7 @@
 """
 Flask 後端 + APScheduler 每日自動更新
 """
+import functools
 import logging
 import math
 import os
@@ -8,7 +9,7 @@ import threading
 import time
 from datetime import date, datetime
 
-from flask import Flask, jsonify, redirect, render_template, request, url_for
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 from apscheduler.schedulers.background import BackgroundScheduler
 
 import db
@@ -17,7 +18,20 @@ from scraper import scrape
 log = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.secret_key    = os.environ.get("SECRET_KEY", "leju-admin-secret-2024")
+ADMIN_PASSWORD    = os.environ.get("ADMIN_PASSWORD", "leju2024")
 db.init_db()
+
+
+# ── 管理後台驗證 ──────────────────────────────────────────────────────────────
+
+def login_required(f):
+    @functools.wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login", next=request.path))
+        return f(*args, **kwargs)
+    return decorated
 
 # ── 簡易 TTL 快取（避免每次請求都重算重度 SQL）─────────────────────────────
 _cache: dict = {}
@@ -245,12 +259,30 @@ def price_district(district_name):
                            back_url=back_url)
 
 
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    error = None
+    if request.method == "POST":
+        if request.form.get("password") == ADMIN_PASSWORD:
+            session["admin_logged_in"] = True
+            next_url = request.args.get("next") or url_for("index")
+            return redirect(next_url)
+        error = "密碼錯誤，請再試一次"
+    return render_template("admin_login.html", error=error)
+
+
+@app.route("/admin/logout")
+def admin_logout():
+    session.pop("admin_logged_in", None)
+    return redirect(url_for("landing"))
+
+
 @app.route("/dashboard")
+@login_required
 def index():
     stats   = db.get_subarea_stats()
     last    = db.get_last_scrape()
-    running = _scrape_running
-    return render_template("index.html", stats=stats, last_scrape=last, running=running)
+    return render_template("index.html", stats=stats, last_scrape=last)
 
 
 @app.route("/subarea/<int:sid>")
@@ -403,6 +435,7 @@ def api_estimate():
 
 
 @app.route("/api/refresh", methods=["POST"])
+@login_required
 def api_refresh():
     if _scrape_running:
         return jsonify({"status": "already_running", "message": "爬蟲執行中，請稍後"})
