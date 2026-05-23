@@ -873,17 +873,27 @@ function lifeDL(m){return m<1000?`${m}m`:`${(m/1000).toFixed(1)}km`;}
 function lifeOnInput(){
   clearTimeout(lifeAcTimer);
   const q=document.getElementById('lifeInput').value.trim();
-  if(q.length<2){document.getElementById('lifeAcList').style.display='none';return;}
+  const list=document.getElementById('lifeAcList');
+  if(q.length<2){list.style.display='none';return;}
+  // 命中快取 → 立即顯示
+  if(_acCache[q]){
+    const data=_acCache[q];
+    if(!data.length){list.style.display='none';return;}
+    list.innerHTML=data.map(c=>`<div class="life-ac-item" data-name="${c.name}" data-sid="${c.sid||''}" data-addr="${c.sample_address||''}" onclick="lifeSelectAC(this)"><span>${c.name}</span><span class="life-ac-sub">${c.subarea_name||''} · ${c.avg_unit_price||'-'}萬/坪</span></div>`).join('');
+    list.style.display='block';return;
+  }
+  list.innerHTML='<div style="padding:.4rem .7rem;color:#888;font-size:.75rem;">搜尋中…</div>';
+  list.style.display='block';
   lifeAcTimer=setTimeout(async()=>{
     try{
       const r=await fetch(`/api/communities?q=${encodeURIComponent(q)}`);
       const data=await r.json();
-      const list=document.getElementById('lifeAcList');
+      _acCache[q]=data;
       if(!data.length){list.style.display='none';return;}
       list.innerHTML=data.map(c=>`<div class="life-ac-item" data-name="${c.name}" data-sid="${c.sid||''}" data-addr="${c.sample_address||''}" onclick="lifeSelectAC(this)"><span>${c.name}</span><span class="life-ac-sub">${c.subarea_name||''} · ${c.avg_unit_price||'-'}萬/坪</span></div>`).join('');
       list.style.display='block';
-    }catch(e){document.getElementById('lifeAcList').style.display='none';}
-  },300);
+    }catch(e){list.style.display='none';}
+  },200);
 }
 let _lifeAddr='';
 let _lifeSid='';
@@ -1559,30 +1569,44 @@ function setAreaType(t) {
   document.getElementById('est_at_without').classList.toggle('active', t === 'without');
 }
 
+const _acCache = {};   // client-side 自動完成快取
 function fetchCommunities(q) {
   clearTimeout(_estTimer);
   const box = document.getElementById('est_suggestions');
   if (q.length < 2) { box.style.display = 'none'; return; }
+
+  // 命中快取 → 立即顯示，不等 debounce
+  if (_acCache[q]) { _renderSuggestions(box, _acCache[q]); return; }
+
+  // 顯示載入中提示
+  box.innerHTML = '<div style="padding:.4rem .7rem;color:var(--mute);font-size:.75rem;">搜尋中…</div>';
+  box.style.display = 'block';
+
   _estTimer = setTimeout(async () => {
     try {
       const res  = await fetch('/api/communities?q=' + encodeURIComponent(q));
       const data = await res.json();
-      if (!data.length) { box.style.display = 'none'; return; }
-      box.innerHTML = data.map(c => {
-        const esc = c.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-        const avg = c.avg_unit_price ? c.avg_unit_price + '萬/坪' : '暫無均價';
-        const addr = (c.sample_address||'').replace(/'/g,"\\'");
-        return `<div class="est-suggestion"
-                     onclick="selectCommunity('${esc}',${c.sid},'${c.subarea_name}','${addr}')">
-                  <b>${c.name}</b>
-                  <span style="color:var(--mute);font-size:.72rem;">
-                    &nbsp;${c.subarea_name} · ${c.tx_count}筆 · ${avg}
-                  </span>
-                </div>`;
-      }).join('');
-      box.style.display = 'block';
+      _acCache[q] = data;          // 存入快取
+      _renderSuggestions(box, data);
     } catch(e) { box.style.display = 'none'; }
-  }, 280);
+  }, 200);
+}
+
+function _renderSuggestions(box, data) {
+  if (!data.length) { box.style.display = 'none'; return; }
+  box.innerHTML = data.map(c => {
+    const esc  = c.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const avg  = c.avg_unit_price ? c.avg_unit_price + '萬/坪' : '暫無均價';
+    const addr = (c.sample_address||'').replace(/'/g,"\\'");
+    return `<div class="est-suggestion"
+                 onclick="selectCommunity('${esc}',${c.sid},'${c.subarea_name}','${addr}')">
+              <b>${c.name}</b>
+              <span style="color:var(--mute);font-size:.72rem;">
+                &nbsp;${c.subarea_name} · ${c.tx_count}筆 · ${avg}
+              </span>
+            </div>`;
+  }).join('');
+  box.style.display = 'block';
 }
 
 function selectCommunity(name, sid, subarea, addr) {
@@ -1607,6 +1631,7 @@ async function doEstimate() {
   }
   box.classList.add('show');
   box.innerHTML = '<div style="color:var(--mute);text-align:center;">查詢中…</div>';
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   try {
     const url = '/api/estimate?name=' + encodeURIComponent(name) + (sid ? '&sid=' + sid : '');
@@ -1833,6 +1858,9 @@ function recentRender() {
   ).join('');
 }
 function recentPick(name, sid) {
+  // 確保切到行情試算 tab
+  const estBtn = document.querySelector('.tab-btn[onclick*="estimate"]');
+  if (estBtn && !estBtn.classList.contains('active')) switchTab('estimate', estBtn);
   document.getElementById('est_community').value = name;
   document.getElementById('est_sid').value = sid || '';
   doEstimate();
