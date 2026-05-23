@@ -1785,9 +1785,26 @@ async function doEstimate() {
     cmpBtn.disabled      = alreadyIn || _cmpList.length >= 2;
 
   } catch(e) {
-    box.innerHTML = '<div style="color:#c0392b;text-align:center;">查詢失敗，請稍後再試</div>';
-      document.getElementById('btn_add_cmp').style.display = 'none';
-  document.getElementById('btn_share_line').style.display = 'none';
+    // 可能是伺服器剛從睡眠喚醒，3秒後自動重試一次
+    box.innerHTML = '<div style="color:var(--mute);text-align:center;">伺服器喚醒中，3 秒後自動重試…</div>';
+    document.getElementById('btn_add_cmp').style.display = 'none';
+    document.getElementById('btn_share_line').style.display = 'none';
+    setTimeout(async () => {
+      try {
+        box.innerHTML = '<div style="color:var(--mute);text-align:center;">查詢中…</div>';
+        const url2 = '/api/estimate?name=' + encodeURIComponent(name) + (sid ? '&sid=' + sid : '');
+        const res2 = await fetch(url2);
+        const d2   = await res2.json();
+        if (d2 && d2.avg_unit_price) {
+          // 重新觸發完整流程
+          doEstimate();
+        } else {
+          box.innerHTML = '<div style="color:#c0392b;text-align:center;">查詢失敗，請稍後再試　<button onclick="doEstimate()" style="margin-left:.5rem;padding:.2rem .7rem;border-radius:6px;border:1px solid #c0392b;background:none;color:#c0392b;cursor:pointer;font-size:.8rem;">重試</button></div>';
+        }
+      } catch(e2) {
+        box.innerHTML = '<div style="color:#c0392b;text-align:center;">查詢失敗，請稍後再試　<button onclick="doEstimate()" style="margin-left:.5rem;padding:.2rem .7rem;border-radius:6px;border:1px solid #c0392b;background:none;color:#c0392b;cursor:pointer;font-size:.8rem;">重試</button></div>';
+      }
+    }, 3000);
   }
 }
 
