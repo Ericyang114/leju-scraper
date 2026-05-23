@@ -428,6 +428,12 @@ def api_estimate():
         return jsonify({"error": "name required"}), 400
     sid_str = request.args.get("sid", "")
     sid = int(sid_str) if sid_str.isdigit() else None
+    # sid 無效時從 DB 查出正確 sid（確保周遭查詢能運作）
+    if sid is None:
+        with db.get_conn() as _conn:
+            row = db._row(_conn, f"SELECT sid FROM transactions WHERE community={db.PH} AND sid IS NOT NULL LIMIT 1", (name,))
+        if row:
+            sid = row["sid"]
     result = db.get_community_estimate(name, sid)
     if not result:
         return jsonify({"tx_count": 0})

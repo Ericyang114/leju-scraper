@@ -1854,7 +1854,7 @@ recentRender();
   if (estBtn) switchTab('estimate', estBtn);
   // 社區名稱 + sid
   document.getElementById('est_community').value = q;
-  document.getElementById('est_sid').value = p.get('sid') || '';
+  document.getElementById('est_sid').value = /^\d+$/.test(p.get('sid')||'') ? p.get('sid') : '';
   // 坪數
   const area = p.get('area');
   if (area) document.getElementById('est_area').value = area;
