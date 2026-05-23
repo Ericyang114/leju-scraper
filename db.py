@@ -825,38 +825,40 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
             return None
 
     # ── Step 1：先撈近 2 年同社區全部資料，判斷社區性質 ──────────
-    c_cl_all = [f"community={PH}",
+    _base_cl = [f"community={PH}",
                 "(is_special_trade IS NULL OR is_special_trade=0)",
-                f"transaction_date>={PH}", "total_price>0", "total_area>0"]
-    c_p_all  = [name, two_yr]
+                "total_price>0", "total_area>0"]
+    _base_p_suffix = []
     if sid:
-        c_cl_all.append(f"sid={PH}"); c_p_all.append(sid)
+        _base_cl.append(f"sid={PH}"); _base_p_suffix = [sid]
 
-    with get_conn() as conn:
-        c_rows_all = _rows(conn, f"""
-            SELECT community, total_price, total_area,
-                   parking_price, parking_area, transaction_date, age, building_type
-            FROM transactions WHERE {" AND ".join(c_cl_all)}
-            ORDER BY transaction_date DESC
-        """, c_p_all)
-
-    # 若 2 年內無資料，往前擴展至 3 年（避免空白）
-    _used_fallback = False
-    if not c_rows_all:
-        _used_fallback = True
-        three_yr = _three_year_roc()
-        c_p_all[-1 if not sid else -2] = three_yr  # 替換日期參數
-        # 重新用正確方式替換
-        c_p_fallback = [name, three_yr]
-        if sid:
-            c_p_fallback.append(sid)
+    def _fetch_c_rows_all(date_cutoff):
+        cl = _base_cl + ([f"transaction_date>={PH}"] if date_cutoff else [])
+        p  = [name, date_cutoff] + _base_p_suffix if date_cutoff else [name] + _base_p_suffix
         with get_conn() as conn:
-            c_rows_all = _rows(conn, f"""
+            return _rows(conn, f"""
                 SELECT community, total_price, total_area,
                        parking_price, parking_area, transaction_date, age, building_type
-                FROM transactions WHERE {" AND ".join(c_cl_all)}
+                FROM transactions WHERE {" AND ".join(cl)}
                 ORDER BY transaction_date DESC
-            """, c_p_fallback)
+            """, p)
+
+    c_rows_all = _fetch_c_rows_all(two_yr)
+
+    # fallback 層級：2年 → 3年 → 全部歷史（避免空白）
+    _used_fallback = False
+    _date_cutoff   = two_yr
+    if not c_rows_all:
+        three_yr   = _three_year_roc()
+        c_rows_all = _fetch_c_rows_all(three_yr)
+        if c_rows_all:
+            _used_fallback = True
+            _date_cutoff   = three_yr
+        else:
+            # 全部歷史
+            c_rows_all   = _fetch_c_rows_all(None)
+            _used_fallback = True
+            _date_cutoff   = None   # 無日期限制
 
     # 判斷社區性質：有任何成屋成交（age != '預售'）→ 成屋社區
     # 只有全部都是預售登錄、完全沒有成屋成交，才視為預售社區
@@ -869,22 +871,29 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
     else:
         age_clause = "AND (age IS NULL OR age!='預售')"  # 成屋社區：排除預售
 
-    # 若 Step 1 使用了 3 年回溯，Step 2 也需跟進，否則仍回傳 tx_count=0
-    _date_cutoff = _three_year_roc() if _used_fallback else two_yr
+    # Step 2 沿用 Step 1 相同的日期窗口（2年 / 3年 / 無限制）
+    def _build_date_clause(cutoff, extra_clauses, extra_params):
+        """回傳 (clauses_list, params_list)，cutoff=None 表示不加日期限制。"""
+        cl = list(extra_clauses)
+        p  = list(extra_params)
+        if cutoff:
+            cl.append(f"transaction_date>={PH}")
+            p.append(cutoff)
+        return cl, p
 
-    c_cl = [f"community={PH}",
-            "(is_special_trade IS NULL OR is_special_trade=0)",
-            f"transaction_date>={PH}", "total_price>0", "total_area>0"]
-    c_p  = [name, _date_cutoff]
+    c_cl_base = [f"community={PH}",
+                 "(is_special_trade IS NULL OR is_special_trade=0)",
+                 "total_price>0", "total_area>0"]
+    c_cl, c_p = _build_date_clause(_date_cutoff, c_cl_base, [name])
     if sid:
         c_cl.append(f"sid={PH}"); c_p.append(sid)
 
     n_rows: list = []
     if sid:
-        n_cl = [f"sid={PH}", f"community!={PH}", "community IS NOT NULL",
-                "(is_special_trade IS NULL OR is_special_trade=0)",
-                f"transaction_date>={PH}", "total_price>0", "total_area>0"]
-        n_p  = [sid, name, _date_cutoff]
+        n_cl_base = [f"sid={PH}", f"community!={PH}", "community IS NOT NULL",
+                     "(is_special_trade IS NULL OR is_special_trade=0)",
+                     "total_price>0", "total_area>0"]
+        n_cl, n_p = _build_date_clause(_date_cutoff, n_cl_base, [sid, name])
 
     with get_conn() as conn:
         c_rows = _rows(conn, f"""
@@ -1012,6 +1021,7 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         "q1":                 round(q1_disp, 1) if q1_disp is not None else None,
         "q3":                 round(q3_disp, 1) if q3_disp is not None else None,
         "latest_date":        latest,
+        "date_window":        _date_cutoff,   # None = 全部歷史；否則為起始日期字串
         "avg_parking_price":  round(sum(p_prices)/len(p_prices), 0) if p_prices else None,
         "avg_parking_area":   round(sum(p_areas) /len(p_areas),  1) if p_areas  else None,
         "parking_sample":     len(p_prices),
