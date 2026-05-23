@@ -1653,7 +1653,7 @@ async function doEstimate() {
     const hasNearby    = d && d.tx_nearby > 0;
     if (!d || !d.avg_unit_price || (!hasCommunity && !hasNearby)) {
       box.innerHTML = `<div style="color:var(--mute);text-align:center;padding:.3rem;">
-        查無「${name}」的相關成交記錄，請確認社區名稱或嘗試其他關鍵字
+        查無「${name}」及周遭生活圈的近2年成交記錄，請嘗試其他關鍵字
       </div>`;
           document.getElementById('btn_add_cmp').style.display = 'none';
   document.getElementById('btn_share_line').style.display = 'none';
@@ -1730,21 +1730,14 @@ async function doEstimate() {
 
     const nearbyNote = d.tx_nearby > 0 ? `＋周遭 ${d.tx_nearby} 筆` : '';
     const filterNote = d.tx_raw > d.tx_count ? `（已自動排除異常成交）` : '';
-    const isHistory  = d.date_window === null || d.date_window === undefined;
-    const periodLabel = isHistory ? '全部歷史' : '近2年';
-    const historyWarn = isHistory
-      ? `<div style="font-size:.7rem;background:#fff3cd;border-left:3px solid #e6ac00;border-radius:0 6px 6px 0;padding:.4rem .7rem;margin-bottom:.5rem;color:#7a5f10;">
-           ⚠️ 該社區近3年無新成交記錄，以下為全歷史成交數據（最新：${d.latest_date || '—'}），僅供參考。
-         </div>` : '';
     const sourceNote = hasCommunity
-      ? `📊 根據 <b>${d.tx_count}</b> 筆${periodLabel}${d.community}實價登錄資料${filterNote}${nearbyNote}`
+      ? `📊 根據 <b>${d.tx_count}</b> 筆近期${d.community}實價登錄資料${filterNote}${nearbyNote}`
       : `📊 ${d.community} 近2年無成交記錄，依同生活圈 <b>${d.tx_nearby}</b> 筆周遭行情推估`;
     box.innerHTML = `
-      ${historyWarn}
       <div style="font-size:.7rem;color:var(--mute);margin-bottom:.6rem;">
         ${sourceNote} · 最新：${d.latest_date || '—'}
       </div>
-      <div class="result-row"><span>${periodLabel}成交單價區間</span>
+      <div class="result-row"><span>近2年成交單價區間</span>
         <span style="color:var(--navy);font-weight:700;">${d.q1 ?? lo} – ${d.q3 ?? hi} <small style="font-weight:400;color:var(--mute);">萬/坪</small></span>
       </div>
       ${parkingInfoHtml}
