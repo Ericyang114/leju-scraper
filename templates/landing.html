@@ -1766,8 +1766,11 @@ async function doEstimate() {
         shareMsg += `，${area}坪估算約 ${est} 萬`;
       }
       shareMsg += `，最新成交 ${d.latest_date || '—'}`;
-      // 直達連結：點開直接跳到該社區的行情試算
-      const directUrl = `https://leju-scraper.onrender.com/?q=${encodeURIComponent(name)}${sid ? '&sid=' + sid : ''}`;
+      // 直達連結：帶入社區、坪數、車位，點開直接還原試算結果
+      let directUrl = `https://leju-scraper.onrender.com/?q=${encodeURIComponent(name)}`;
+      if (sid)   directUrl += `&sid=${sid}`;
+      if (area > 0) directUrl += `&area=${area}`;
+      if (_estParking > 0) directUrl += `&pk=${_estParking}&pkt=${_estAreaType}`;
       shareMsg += `\n老楊房快說 · 桃園房市行情查詢\n${directUrl}`;
       _shareLineText = shareMsg;
       document.getElementById('btn_share_line').style.display = '';
@@ -1829,13 +1832,29 @@ recentRender();
   const p = new URLSearchParams(location.search);
   const q = (p.get('q') || '').trim();
   if (!q) return;
-  const sid = p.get('sid') || '';
   // 切到行情試算 tab
   const estBtn = document.querySelector('.tab-btn[onclick*="estimate"]');
   if (estBtn) switchTab('estimate', estBtn);
-  // 填入欄位並執行試算
+  // 社區名稱 + sid
   document.getElementById('est_community').value = q;
-  document.getElementById('est_sid').value = sid;
+  document.getElementById('est_sid').value = p.get('sid') || '';
+  // 坪數
+  const area = p.get('area');
+  if (area) document.getElementById('est_area').value = area;
+  // 車位數量
+  const pk = parseInt(p.get('pk') || '0');
+  if (pk >= 0 && pk <= 2) {
+    _estParking = pk;
+    [0,1,2].forEach(i => document.getElementById('est_pk'+i)?.classList.toggle('active', i===pk));
+    const atr = document.getElementById('est_area_type_row');
+    if (atr) atr.style.display = pk > 0 ? 'block' : 'none';
+    const pkt = p.get('pkt');
+    if (pkt === 'without') {
+      _estAreaType = 'without';
+      document.getElementById('est_at_with')?.classList.remove('active');
+      document.getElementById('est_at_without')?.classList.add('active');
+    }
+  }
   doEstimate();
 })();
 
