@@ -176,10 +176,6 @@
     /* ── Footer ── */
     footer{background:var(--navy);color:rgba(255,255,255,.38);text-align:center;font-size:.68rem;padding:1.1rem;font-family:'Noto Sans TC',system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;}
 
-    /* ── 趨勢圖 ── */
-    .trend-wrap{margin-top:.9rem;background:#fff;border-radius:10px;padding:.8rem .6rem .5rem;box-shadow:0 1px 4px rgba(0,0,0,.06);}
-    .trend-title{font-size:.72rem;font-weight:700;color:var(--navy);margin-bottom:.5rem;display:flex;align-items:center;gap:.3rem;}
-    .trend-empty{font-size:.72rem;color:var(--mute);text-align:center;padding:.8rem 0;}
 
     /* ── 房貸明細表 ── */
     .amort-wrap{margin-top:.8rem;}
@@ -689,12 +685,6 @@
 
       <button class="btn-calc" onclick="doEstimate()">開始試算</button>
       <div class="result-box" id="est_result"></div>
-      <!-- 趨勢圖（估價後顯示） -->
-      <div class="trend-wrap" id="est_trend_wrap" style="display:none;">
-        <div class="trend-title">📈 近3年每季成交單價走勢</div>
-        <canvas id="est_trend_chart" height="160"></canvas>
-        <div class="trend-empty" id="est_trend_empty" style="display:none;">此社區近3年成交資料不足，無法產生趨勢圖</div>
-      </div>
       <!-- 加入比較按鈕（估價後顯示） -->
       <button class="btn-add-cmp" id="btn_add_cmp" style="display:none;" onclick="cmpAdd()">＋ 加入比較（最多2個社區）</button>
     </div>
@@ -1622,7 +1612,6 @@ async function doEstimate() {
   const area = parseFloat(document.getElementById('est_area').value) || 0;
   const box  = document.getElementById('est_result');
 
-  document.getElementById('est_trend_wrap').style.display = 'none';
   document.getElementById('btn_add_cmp').style.display = 'none';
   if (!name) {
     box.classList.add('show');
@@ -1644,8 +1633,7 @@ async function doEstimate() {
       box.innerHTML = `<div style="color:var(--mute);text-align:center;padding:.3rem;">
         查無「${name}」及周遭生活圈的近2年成交記錄，請嘗試其他關鍵字
       </div>`;
-      document.getElementById('est_trend_wrap').style.display = 'none';
-      document.getElementById('btn_add_cmp').style.display = 'none';
+          document.getElementById('btn_add_cmp').style.display = 'none';
       return;
     }
 
@@ -1739,9 +1727,6 @@ async function doEstimate() {
         ＊ 如需專業評估請直接聯繫老楊
       </div>`;
 
-    // ── 趨勢圖 ─────────────────────────────────────────────────
-    renderTrendChart(name, sid);
-
     // ── 最近搜尋 ────────────────────────────────────────────────
     recentSave(name, sid);
 
@@ -1756,81 +1741,7 @@ async function doEstimate() {
 
   } catch(e) {
     box.innerHTML = '<div style="color:#c0392b;text-align:center;">查詢失敗，請稍後再試</div>';
-    document.getElementById('est_trend_wrap').style.display = 'none';
-    document.getElementById('btn_add_cmp').style.display = 'none';
-  }
-}
-
-// ── 趨勢圖繪製 ──────────────────────────────────────────────────────────
-let _trendChart = null; // 保存 Chart 實例，防止重複建立
-async function renderTrendChart(name, sid) {
-  const wrap  = document.getElementById('est_trend_wrap');
-  const empty = document.getElementById('est_trend_empty');
-  const canvas = document.getElementById('est_trend_chart');
-  wrap.style.display = '';
-  empty.style.display = 'none';
-  canvas.style.display = '';
-
-  try {
-    const url = '/api/community-trend?name=' + encodeURIComponent(name) + (sid ? '&sid=' + sid : '');
-    const trend = await fetch(url).then(r => r.json());
-
-    // 需要至少2個季度才畫圖
-    if (!Array.isArray(trend) || trend.length < 2) {
-      canvas.style.display = 'none';
-      empty.style.display  = '';
-      return;
-    }
-
-    const labels = trend.map(t => t.label);
-    const data   = trend.map(t => t.avg);
-    const counts = trend.map(t => t.count);
-
-    // 銷毀舊 chart 再建新的，避免 canvas reuse 報錯
-    if (_trendChart) { _trendChart.destroy(); _trendChart = null; }
-
-    _trendChart = new Chart(canvas, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: '平均單價（萬/坪）',
-          data,
-          borderColor: '#1a2e5a',
-          backgroundColor: 'rgba(26,46,90,.08)',
-          pointBackgroundColor: '#b8922a',
-          pointRadius: 4,
-          tension: 0.35,
-          fill: true,
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => {
-                const c = counts[ctx.dataIndex];
-                return ` ${ctx.parsed.y} 萬/坪（${c} 筆）`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: { ticks: { font: { size: 10 }, maxRotation: 45 } },
-          y: {
-            ticks: {
-              font: { size: 10 },
-              callback: v => v + ' 萬'
-            },
-            beginAtZero: false,
-          }
-        }
-      }
-    });
-  } catch(e) {
-    wrap.style.display = 'none';
+      document.getElementById('btn_add_cmp').style.display = 'none';
   }
 }
 
