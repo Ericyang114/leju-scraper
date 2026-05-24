@@ -472,6 +472,46 @@ def api_status():
     return jsonify({"running": _scrape_running, "last_scrape": last})
 
 
+@app.route("/healthz")
+def healthz():
+    """健康檢查端點，回傳資料新鮮度資訊。"""
+    try:
+        gs   = db.get_global_stats()
+        last = db.get_last_scrape()
+
+        # 計算資料新鮮度：最後成功爬蟲距今幾天
+        stale_days = None
+        status     = "ok"
+        message    = "正常"
+
+        if last and last.get("scraped_at"):
+            try:
+                from datetime import datetime as _dt
+                last_dt    = _dt.fromisoformat(last["scraped_at"][:19])
+                stale_days = (datetime.utcnow() - last_dt).days
+                if stale_days > 3:
+                    status  = "stale"
+                    message = f"資料已 {stale_days} 天未更新"
+                elif last.get("status") == "error":
+                    status  = "warn"
+                    message = "最近一次爬蟲失敗：" + (last.get("message") or "")
+            except Exception:
+                pass
+
+        return jsonify({
+            "status":       status,
+            "message":      message,
+            "total_tx":     gs.get("total_tx", 0),
+            "latest_month": gs.get("latest_month", ""),
+            "last_scrape":  last.get("scraped_at", "")[:10] if last else "",
+            "last_status":  last.get("status", "")          if last else "",
+            "stale_days":   stale_days,
+            "scraping_now": _scrape_running,
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route("/api/subscribe", methods=["POST"])
 def api_subscribe():
     """訂閱社區行情通知。"""
