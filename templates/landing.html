@@ -1939,9 +1939,29 @@ async function doEstimate() {
     const sourceNote = hasCommunity
       ? `📊 根據 <b>${d.tx_count}</b> 筆近期${d.community}實價登錄資料${filterNote}${nearbyNote}`
       : `📊 ${d.community} 近2年無成交記錄，依同生活圈 <b>${d.tx_nearby}</b> 筆周遭行情推估`;
+
+    // ── 可信度分級 ──────────────────────────────────────────────────
+    const _sampleN = hasCommunity ? (d.tx_count + (d.tx_nearby || 0)) : (d.tx_nearby || 0);
+    let _conf, _confStyle;
+    if (_sampleN >= 20) {
+      _conf = '✅ 高信度';
+      _confStyle = 'background:#d1fae5;color:#065f46;';
+    } else if (_sampleN >= 8) {
+      _conf = '🟡 中信度';
+      _confStyle = 'background:#fef9c3;color:#854d0e;';
+    } else if (_sampleN >= 3) {
+      _conf = '🟠 低信度';
+      _confStyle = 'background:#ffedd5;color:#9a3412;';
+    } else {
+      _conf = '❗ 樣本極少，僅供參考';
+      _confStyle = 'background:#fee2e2;color:#991b1b;';
+    }
+    const confBadge = `<span style="font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;${_confStyle}">${_conf}（${_sampleN}筆）</span>`;
+
     box.innerHTML = `
-      <div style="font-size:.7rem;color:var(--mute);margin-bottom:.6rem;">
-        ${sourceNote} · 最新：${d.latest_date || '—'}
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.4rem;margin-bottom:.6rem;">
+        <div style="font-size:.7rem;color:var(--mute);">${sourceNote} · 最新：${d.latest_date || '—'}</div>
+        ${confBadge}
       </div>
       <div class="result-row"><span>近2年成交單價區間</span>
         <span style="color:var(--navy);font-weight:700;">${d.q1 ?? lo} – ${d.q3 ?? hi} <small style="font-weight:400;color:var(--mute);">萬/坪</small></span>
