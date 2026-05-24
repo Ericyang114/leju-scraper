@@ -694,12 +694,6 @@ def redevelopment():
     return render_template("redevelopment.html", groups=groups)
 
 
-@app.route("/healthz")
-def healthz():
-    """Render health check endpoint."""
-    return "ok", 200
-
-
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-8s %(message)s")
