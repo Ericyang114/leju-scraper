@@ -268,7 +268,13 @@
 <!-- Top bar -->
 <div class="topbar">
   <span class="brand">永慶不動產</span>
-  <span class="last-update">{% if last_scrape %}資料更新：{{ last_scrape.scraped_at[:10] }}{% endif %}</span>
+  <span class="last-update">
+    {%- if global_stats %}
+      📦 收錄 {{ "{:,}".format(global_stats.total_tx) }} 筆
+      {%- if global_stats.latest_month %} · 最新 {{ global_stats.latest_month }}{% endif %}
+    {%- endif %}
+    {%- if last_scrape %} · 更新：{{ last_scrape.scraped_at[:10] }}{% endif %}
+  </span>
 </div>
 
 <!-- Agent card -->

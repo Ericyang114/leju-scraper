@@ -1175,3 +1175,16 @@ def clear_scrape_log():
 def get_last_scrape() -> dict | None:
     with get_conn() as conn:
         return _row(conn, "SELECT * FROM scrape_log ORDER BY id DESC LIMIT 1")
+
+
+def get_global_stats() -> dict:
+    """回傳全站統計：總成交筆數、最新成交月份（ROC）。"""
+    with get_conn() as conn:
+        total = _scalar(conn, "SELECT COUNT(*) FROM transactions") or 0
+        latest = _scalar(conn,
+            "SELECT MAX(transaction_date) FROM transactions "
+            "WHERE (is_special_trade IS NULL OR is_special_trade=0)"
+        )
+    # latest 格式如 "113/04"，取前6字元即可
+    latest_month = (latest or "")[:6]
+    return {"total_tx": total, "latest_month": latest_month}

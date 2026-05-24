@@ -214,9 +214,11 @@ NTPC_DISTRICT_INFO = {
 
 @app.route("/")
 def landing():
-    stats = _cached("subarea_stats", db.get_subarea_stats)
-    last  = _cached("last_scrape",   db.get_last_scrape)
-    return render_template("landing.html", stats=stats, last_scrape=last)
+    stats        = _cached("subarea_stats",  db.get_subarea_stats)
+    last         = _cached("last_scrape",    db.get_last_scrape)
+    global_stats = _cached("global_stats",   db.get_global_stats)
+    return render_template("landing.html", stats=stats, last_scrape=last,
+                           global_stats=global_stats)
 
 
 @app.route("/price")
