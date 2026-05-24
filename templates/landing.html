@@ -1590,10 +1590,27 @@ function shareEstimate() {
 let _printEstData = null;
 function printEstimate() {
   if (!_printEstData) return;
-  const d = _printEstData;
+  const d    = _printEstData;
   const area = parseFloat(document.getElementById('est_area').value) || 0;
   const avgP = parseFloat(d.avg_unit_price) || 0;
-  const estTotal = area > 0 && avgP > 0 ? (avgP * area).toFixed(1) : null;
+
+  // 同 totalHtml 的算法：扣車位坪數、用 Q1–Q3 區間
+  let estTotalStr = null;
+  let areaNote    = area > 0 ? `${area} 坪` : null;
+  if (area > 0 && avgP > 0) {
+    const pkCount = _estParking;
+    const pkPrice = d.avg_parking_price || 0;
+    const pkArea  = d.avg_parking_area  || 0;
+    let houseArea = area;
+    if (pkCount > 0 && _estAreaType === 'with') houseArea = Math.max(area - pkArea * pkCount, 1);
+    const pkTotal   = pkPrice * pkCount;
+    const estTotalL = (houseArea * (d.q1 || avgP * 0.95) + pkTotal).toFixed(1);
+    const estTotalH = (houseArea * (d.q3 || avgP * 1.05) + pkTotal).toFixed(1);
+    estTotalStr = `${estTotalL} – ${estTotalH} 萬`;
+    if (pkCount > 0 && _estAreaType === 'with') {
+      areaNote = `${area} 坪（含${pkCount}個車位，純房屋≈${houseArea.toFixed(1)}坪）`;
+    }
+  }
   const old = document.getElementById('print-est-area');
   if (old) old.remove();
   const el = document.createElement('div');
@@ -1618,15 +1635,15 @@ function printEstimate() {
         <td style="padding:.45rem .7rem;font-weight:600;">成交區間（Q1–Q3）</td>
         <td style="padding:.45rem .7rem;">${d.q1 ?? '—'} – ${d.q3 ?? '—'} 萬/坪</td>
       </tr>
-      ${area > 0 ? `
+      ${areaNote ? `
       <tr style="background:#f0f7f4;">
         <td style="padding:.45rem .7rem;font-weight:600;">試算坪數</td>
-        <td style="padding:.45rem .7rem;">${area} 坪</td>
+        <td style="padding:.45rem .7rem;">${areaNote}</td>
       </tr>` : ''}
-      ${estTotal ? `
+      ${estTotalStr ? `
       <tr>
-        <td style="padding:.45rem .7rem;font-weight:700;color:#b8922a;">估算總價</td>
-        <td style="padding:.45rem .7rem;font-weight:700;color:#b8922a;font-size:1.1rem;">${estTotal} 萬</td>
+        <td style="padding:.45rem .7rem;font-weight:700;color:#b8922a;">合理總價範圍</td>
+        <td style="padding:.45rem .7rem;font-weight:700;color:#b8922a;font-size:1.05rem;">${estTotalStr}</td>
       </tr>` : ''}
       <tr style="background:#f0f7f4;">
         <td style="padding:.45rem .7rem;font-weight:600;">最新成交</td>
