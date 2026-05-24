@@ -399,7 +399,11 @@ def api_communities():
     q = request.args.get("q", "").strip()
     if len(q) < 2:
         return jsonify([])
-    results = db.search_communities(q, limit=8)
+    try:
+        limit = min(int(request.args.get("limit", 8)), 20)
+    except ValueError:
+        limit = 8
+    results = db.search_communities(q, limit=limit)
     return jsonify(results)
 
 

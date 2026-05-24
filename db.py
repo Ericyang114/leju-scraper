@@ -737,6 +737,7 @@ def search_communities(query: str, limit: int = 8) -> list:
                 t.community AS name,
                 t.sid,
                 s.name AS subarea_name,
+                s.post_code,
                 COUNT(*) AS tx_count,
                 ROUND(CAST(AVG(CASE WHEN t.unit_price > 0
                                AND t.transaction_date >= {PH}
@@ -751,7 +752,7 @@ def search_communities(query: str, limit: int = 8) -> list:
             WHERE t.community LIKE {PH}
               AND t.community IS NOT NULL
               AND t.community != ''
-            GROUP BY t.community, t.sid, s.name
+            GROUP BY t.community, t.sid, s.name, s.post_code
             ORDER BY tx_count DESC
             LIMIT {PH}
         """, (three_yr, q, limit))

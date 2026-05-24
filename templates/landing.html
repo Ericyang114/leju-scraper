@@ -136,6 +136,20 @@
 
     /* ── Price panel (實價登錄) ── */
     .price-panel{padding:1rem;background:var(--bg);}
+
+    /* ── 社區搜尋框（實價登錄 tab）── */
+    .pv-search-wrap{position:relative;margin-bottom:1rem;}
+    .pv-search-wrap input{width:100%;border:1.5px solid #d1d5db;border-radius:10px;padding:.55rem .9rem .55rem 2.4rem;font-size:.88rem;outline:none;background:#fff;transition:.15s;}
+    .pv-search-wrap input:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(26,46,90,.1);}
+    .pv-search-icon{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);font-size:.95rem;pointer-events:none;}
+    .pv-suggestions{position:absolute;z-index:1000;width:100%;background:#fff;border:1.5px solid var(--navy);border-top:none;border-radius:0 0 10px 10px;display:none;box-shadow:0 6px 18px rgba(0,0,0,.13);max-height:320px;overflow-y:auto;}
+    .pv-suggestion-item{padding:.65rem 1rem;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
+    .pv-suggestion-item:last-child{border-bottom:none;}
+    .pv-suggestion-item:hover{background:#f0f4ff;}
+    .pv-sug-name{font-size:.88rem;font-weight:700;color:var(--navy);}
+    .pv-sug-meta{font-size:.7rem;color:var(--mute);white-space:nowrap;}
+    .pv-sug-district{font-size:.68rem;color:#94a3b8;background:#f1f5f9;border-radius:4px;padding:1px 5px;}
+    .pv-search-empty{padding:.85rem 1rem;font-size:.8rem;color:var(--mute);text-align:center;}
     .section-label{font-size:.7rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.08em;border-left:3px solid var(--gold);padding-left:.5rem;margin-bottom:.85rem;}
     .sa-card{background:#fff;border-radius:10px;box-shadow:0 1px 5px rgba(0,0,0,.07);padding:.85rem 1rem;text-decoration:none;color:var(--text);display:block;transition:transform .15s,box-shadow .15s;border-top:3px solid transparent;}
     .sa-card:hover{transform:translateY(-2px);box-shadow:0 5px 16px rgba(26,46,90,.11);border-top-color:var(--navy);color:var(--text);}
@@ -321,6 +335,15 @@
 
   <!-- ===== 實價登錄 ===== -->
   <div class="panel price-panel active" id="panel-price">
+
+    <!-- 社區名稱快速搜尋 -->
+    <div class="pv-search-wrap">
+      <span class="pv-search-icon">🔍</span>
+      <input type="text" id="pv_search_input" placeholder="直接輸入社區或建案名稱…" autocomplete="off"
+             oninput="pvSearchCommunity(this.value)">
+      <div id="pv_suggestions" class="pv-suggestions"></div>
+    </div>
+    <div style="text-align:center;font-size:.68rem;color:#adb5bd;margin:-0.5rem 0 0.9rem;letter-spacing:.02em;">─── 或選擇行政區瀏覽 ───</div>
 
     <!-- 第一層：選行政區 -->
     <div id="pv-districts">
@@ -1699,6 +1722,64 @@ function setAreaType(t) {
   document.getElementById('est_at_without').classList.toggle('active', t === 'without');
 }
 
+// ── 實價登錄：社區名稱快速搜尋 ──────────────────────────────────────────────
+const _PC_DISTRICT = {
+  '330':'桃園區','320':'中壢區','335':'大溪區','326':'楊梅區',
+  '338':'蘆竹區','337':'大園區','333':'龜山區','334':'八德區',
+  '325':'龍潭區','324':'平鎮區','327':'新屋區','328':'觀音區',
+  '336':'復興區','239':'鶯歌區'
+};
+const _pvCache = {};
+let _pvTimer = null;
+
+function pvSearchCommunity(q) {
+  clearTimeout(_pvTimer);
+  const box = document.getElementById('pv_suggestions');
+  if (q.length < 2) { box.style.display = 'none'; return; }
+
+  if (_pvCache[q]) { _pvRenderSuggestions(box, _pvCache[q]); return; }
+
+  box.innerHTML = '<div class="pv-search-empty">搜尋中…</div>';
+  box.style.display = 'block';
+
+  _pvTimer = setTimeout(async () => {
+    try {
+      const res  = await fetch('/api/communities?q=' + encodeURIComponent(q) + '&limit=10');
+      const data = await res.json();
+      _pvCache[q] = data;
+      _pvRenderSuggestions(box, data);
+    } catch(e) { box.style.display = 'none'; }
+  }, 200);
+}
+
+function _pvRenderSuggestions(box, data) {
+  if (!data.length) {
+    box.innerHTML = '<div class="pv-search-empty">查無符合社區，請試試不同關鍵字</div>';
+    box.style.display = 'block';
+    return;
+  }
+  box.innerHTML = data.map(c => {
+    const esc    = c.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const avg    = c.avg_unit_price ? c.avg_unit_price + '萬/坪' : '暫無均價';
+    const dist   = _PC_DISTRICT[c.post_code] || '';
+    const distBadge = dist ? `<span class="pv-sug-district">${dist}</span>` : '';
+    return `<div class="pv-suggestion-item" onclick="pvSelectCommunity('${esc}',${c.sid})">
+      <div>
+        <div class="pv-sug-name">${c.name}</div>
+        <div style="font-size:.7rem;color:var(--mute);margin-top:.15rem;">${c.subarea_name} · ${c.tx_count}筆 · ${avg}</div>
+      </div>
+      ${distBadge}
+    </div>`;
+  }).join('');
+  box.style.display = 'block';
+}
+
+function pvSelectCommunity(name, sid) {
+  document.getElementById('pv_suggestions').style.display = 'none';
+  document.getElementById('pv_search_input').value = name;
+  window.location.href = '/community/' + sid + '?name=' + encodeURIComponent(name);
+}
+
 const _acCache = {};   // client-side 自動完成快取
 function fetchCommunities(q) {
   clearTimeout(_estTimer);
@@ -2138,6 +2219,10 @@ function xfFill(target) {
 document.addEventListener('click', e => {
   if (!e.target.closest('#est_community') && !e.target.closest('#est_suggestions')) {
     const s = document.getElementById('est_suggestions');
+    if (s) s.style.display = 'none';
+  }
+  if (!e.target.closest('#pv_search_input') && !e.target.closest('#pv_suggestions')) {
+    const s = document.getElementById('pv_suggestions');
     if (s) s.style.display = 'none';
   }
 });
