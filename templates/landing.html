@@ -95,6 +95,14 @@
     /* ── LINE 分享按鈕 ── */
     .btn-share-line{width:100%;margin-top:.55rem;background:#06c755;border:none;color:#fff;border-radius:8px;padding:.42rem .8rem;font-size:.8rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;transition:.12s;}
     .btn-share-line:hover{background:#05b04b;}
+    .btn-print-est{width:100%;margin-top:.4rem;background:transparent;border:1.5px solid #adb5bd;color:#555;border-radius:8px;padding:.38rem .8rem;font-size:.78rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;transition:.12s;}
+    .btn-print-est:hover{border-color:#6c757d;color:#333;background:#f8f9fa;}
+    @media print{
+      body>*:not(#print-est-area){display:none!important;}
+      #print-est-area{display:block!important;position:fixed;top:0;left:0;width:100%;padding:1.5rem 2rem;}
+      .print-header{display:flex!important;align-items:center;gap:1rem;margin-bottom:1.2rem;padding-bottom:.8rem;border-bottom:2px solid #1a7a56;}
+      .no-print{display:none!important;}
+    }
     .panel{display:none;} .panel.active{display:block;}
 
     /* ── 懸浮 CTA ── */
@@ -700,6 +708,9 @@
       <button class="btn-share-line" id="btn_share_line" style="display:none;" onclick="shareEstimate()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
         分享給客戶
+      </button>
+      <button class="btn-print-est no-print" id="btn_print_est" style="display:none;" onclick="printEstimate()">
+        🖨️ 列印 / 儲存 PDF
       </button>
     </div>
     <!-- 社區比較面板 -->
@@ -1566,6 +1577,65 @@ function shareEstimate() {
   window.open(url, '_blank');
 }
 
+let _printEstData = null;
+function printEstimate() {
+  if (!_printEstData) return;
+  const d = _printEstData;
+  const area = parseFloat(document.getElementById('est_area').value) || 0;
+  const avgP = parseFloat(d.avg_unit_price) || 0;
+  const estTotal = area > 0 && avgP > 0 ? (avgP * area).toFixed(1) : null;
+  const old = document.getElementById('print-est-area');
+  if (old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'print-est-area';
+  el.style.display = 'none';
+  el.innerHTML = `
+    <div class="print-header">
+      <img src="/static/images/avatar.png" style="width:56px;height:56px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
+      <div>
+        <div style="font-size:1.1rem;font-weight:700;color:#1a7a56;">楊肇寧｜老楊房快說</div>
+        <div style="font-size:.82rem;color:#555;">永慶不動產 ｜ 0935-195-944</div>
+      </div>
+      <div style="margin-left:auto;font-size:.75rem;color:#888;">列印日期：${new Date().toLocaleDateString('zh-TW')}</div>
+    </div>
+    <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:.6rem;">📋 ${d.community || '—'} · 行情估算報告</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:.88rem;">
+      <tr style="background:#f0f7f4;">
+        <td style="padding:.45rem .7rem;font-weight:600;width:40%;">近2年成交均價</td>
+        <td style="padding:.45rem .7rem;font-weight:700;color:#1a7a56;font-size:1.05rem;">${avgP} 萬/坪</td>
+      </tr>
+      <tr>
+        <td style="padding:.45rem .7rem;font-weight:600;">成交區間（Q1–Q3）</td>
+        <td style="padding:.45rem .7rem;">${d.q1 ?? '—'} – ${d.q3 ?? '—'} 萬/坪</td>
+      </tr>
+      ${area > 0 ? `
+      <tr style="background:#f0f7f4;">
+        <td style="padding:.45rem .7rem;font-weight:600;">試算坪數</td>
+        <td style="padding:.45rem .7rem;">${area} 坪</td>
+      </tr>` : ''}
+      ${estTotal ? `
+      <tr>
+        <td style="padding:.45rem .7rem;font-weight:700;color:#b8922a;">估算總價</td>
+        <td style="padding:.45rem .7rem;font-weight:700;color:#b8922a;font-size:1.1rem;">${estTotal} 萬</td>
+      </tr>` : ''}
+      <tr style="background:#f0f7f4;">
+        <td style="padding:.45rem .7rem;font-weight:600;">最新成交</td>
+        <td style="padding:.45rem .7rem;">${d.latest_date || '—'}</td>
+      </tr>
+      <tr>
+        <td style="padding:.45rem .7rem;font-weight:600;">參考筆數</td>
+        <td style="padding:.45rem .7rem;">${d.tx_count || 0} 筆（同社區）＋ ${d.tx_nearby || 0} 筆（周遭）</td>
+      </tr>
+    </table>
+    <div style="margin-top:1rem;font-size:.68rem;color:#999;border-top:1px solid #eee;padding-top:.6rem;">
+      ⚠ 本估算報告依近2年內政部實價登錄資料統計，僅供市場行情參考，並非《不動產估價師法》所稱之估價報告書，不得作為融資、訴訟、稅務申報之依據。<br>
+      資料來源：leju-scraper.onrender.com ｜ 楊肇寧｜老楊房快說
+    </div>
+  `;
+  document.body.appendChild(el);
+  window.print();
+}
+
 function setParkingCount(n) {
   _estParking = n;
   [0, 1, 2].forEach(i =>
@@ -1635,6 +1705,8 @@ async function doEstimate() {
 
   document.getElementById('btn_add_cmp').style.display = 'none';
   document.getElementById('btn_share_line').style.display = 'none';
+  document.getElementById('btn_print_est').style.display = 'none';
+  _printEstData = null;
   if (!name) {
     box.classList.add('show');
     box.innerHTML = '<div style="color:#c0392b;text-align:center;">請輸入社區名稱</div>';
@@ -1657,6 +1729,8 @@ async function doEstimate() {
       </div>`;
           document.getElementById('btn_add_cmp').style.display = 'none';
   document.getElementById('btn_share_line').style.display = 'none';
+  document.getElementById('btn_print_est').style.display = 'none';
+  _printEstData = null;
       return;
     }
 
@@ -1774,6 +1848,8 @@ async function doEstimate() {
       shareMsg += `\n老楊房快說 · 桃園房市行情查詢\n${directUrl}`;
       _shareLineText = shareMsg;
       document.getElementById('btn_share_line').style.display = '';
+      _printEstData = d;
+      document.getElementById('btn_print_est').style.display = '';
     }
 
     // ── 比較按鈕 ────────────────────────────────────────────────

@@ -1018,6 +1018,62 @@ def get_subarea_by_sid(sid: int) -> dict | None:
         return _row(conn, f"SELECT * FROM subareas WHERE sid={PH}", (sid,))
 
 
+def get_subarea_temperature(sid: int) -> dict:
+    """計算生活圈市場溫度：比較近3個月 vs 前3個月成交量。
+    回傳 level ('hot'|'warm'|'cold')、近期筆數、前期筆數。
+    """
+    from datetime import date
+    today = date.today()
+
+    def _roc_month(offset_months: int) -> str:
+        """回傳 offset_months 個月前的 ROC 日期字串 YYY/MM"""
+        y = today.year
+        m = today.month - offset_months
+        while m <= 0:
+            m += 12; y -= 1
+        return f"{y - 1911}/{m:02d}"
+
+    cur_from  = _roc_month(3)   # 近3個月起點
+    prev_from = _roc_month(6)   # 前3個月起點
+    prev_to   = _roc_month(3)   # 前3個月終點（同 cur_from）
+
+    with get_conn() as conn:
+        cur_row = _row(conn, f"""
+            SELECT COUNT(*) AS cnt FROM transactions
+            WHERE sid={PH} AND transaction_date>={PH}
+              AND (is_special_trade IS NULL OR is_special_trade=0)
+        """, (sid, cur_from))
+        prev_row = _row(conn, f"""
+            SELECT COUNT(*) AS cnt FROM transactions
+            WHERE sid={PH} AND transaction_date>={PH} AND transaction_date<{PH}
+              AND (is_special_trade IS NULL OR is_special_trade=0)
+        """, (sid, prev_from, prev_to))
+
+    cur_cnt  = cur_row["cnt"]  if cur_row  else 0
+    prev_cnt = prev_row["cnt"] if prev_row else 0
+
+    if prev_cnt == 0:
+        ratio = 1.0
+    else:
+        ratio = cur_cnt / prev_cnt
+
+    if ratio >= 1.25:
+        level = "hot"
+    elif ratio <= 0.75:
+        level = "cold"
+    else:
+        level = "warm"
+
+    return {
+        "level":     level,
+        "cur_cnt":   cur_cnt,
+        "prev_cnt":  prev_cnt,
+        "ratio":     round(ratio, 2),
+        "cur_from":  cur_from,
+        "prev_from": prev_from,
+    }
+
+
 def clear_scrape_log():
     with get_conn() as conn:
         _exec(conn, "DELETE FROM scrape_log")

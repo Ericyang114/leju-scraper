@@ -113,7 +113,11 @@
       color: #444;
       margin-bottom: .8rem;
     }
-  </style>
+      .temp-badge{display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .75rem;border-radius:20px;font-size:.78rem;font-weight:700;margin-top:.55rem;}
+    .temp-hot {background:rgba(255,100,80,.18);color:#ff6450;border:1px solid rgba(255,100,80,.35);}
+    .temp-warm{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);}
+    .temp-cold{background:rgba(100,180,255,.18);color:#7ecfff;border:1px solid rgba(100,180,255,.35);}
+    </style>
 </head>
 <body>
 
@@ -130,6 +134,15 @@
     <p class="mb-0" style="font-size:.82rem; opacity:.8;">
       桃園區（郵遞區號 {{ subarea.post_code }}）　符合條件 {{ total }} 筆
     </p>
+    {% if temperature %}
+      {% if temperature.level == 'hot' %}
+        <div class="temp-badge temp-hot">🔥 市場熱絡　近3月 {{ temperature.cur_cnt }} 筆 vs 前3月 {{ temperature.prev_cnt }} 筆（+{{ ((temperature.ratio - 1) * 100)|int }}%）</div>
+      {% elif temperature.level == 'cold' %}
+        <div class="temp-badge temp-cold">❄️ 市場冷靜　近3月 {{ temperature.cur_cnt }} 筆 vs 前3月 {{ temperature.prev_cnt }} 筆（{{ ((temperature.ratio - 1) * 100)|int }}%）</div>
+      {% else %}
+        <div class="temp-badge temp-warm">➡️ 交易持平　近3月 {{ temperature.cur_cnt }} 筆 vs 前3月 {{ temperature.prev_cnt }} 筆</div>
+      {% endif %}
+    {% endif %}
   </div>
 </div>
 

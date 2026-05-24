@@ -320,6 +320,7 @@ def subarea(sid):
         age_filter=age_filter, type_filter=type_filter,
         special_filter=special_filter, date_from=date_from, date_to=date_to,
     )
+    temperature = db.get_subarea_temperature(sid)
 
     return render_template(
         "subarea.html",
@@ -337,6 +338,7 @@ def subarea(sid):
         bldg_types=bldg_types,
         filtered_stats=filtered_stats,
         trend=trend,
+        temperature=temperature,
     )
 
 
