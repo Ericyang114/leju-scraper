@@ -28,6 +28,11 @@ NTPC_CITY_CODE  = "F"
 NTPC_CITY_NAME  = "新北市"
 YINGGE_DISTRICT = {"name": "鶯歌區", "post_code": "239"}
 
+# leju.com.tw 分類有誤的生活圈，強制修正 post_code（sid → 正確郵遞區號）
+SUBAREA_POST_CODE_FIX = {
+    11232: "338",   # 上南崁生活圈 → 蘆竹區（leju 誤掛在龜山 333）
+}
+
 # 桃園市各行政區（名稱 → 郵遞區號）
 TAOYUAN_DISTRICTS = [
     {"name": "桃園區", "post_code": "330"},
@@ -105,15 +110,17 @@ def fetch_subareas(s: cf_requests.Session, post_code: str) -> list[dict]:
     raw = data.get("data") or data
     if not isinstance(raw, list):
         return []
-    return [
-        {
-            "sid":       int(item["id"]),
-            "name":      item.get("small_area_name") or item.get("name") or str(item["id"]),
-            "post_code": post_code,
-        }
-        for item in raw
-        if item.get("id") and (item.get("small_area_status", 1) == 1)
-    ]
+    result = []
+    for item in raw:
+        if not item.get("id") or item.get("small_area_status", 1) != 1:
+            continue
+        sid = int(item["id"])
+        result.append({
+            "sid":       sid,
+            "name":      item.get("small_area_name") or item.get("name") or str(sid),
+            "post_code": SUBAREA_POST_CODE_FIX.get(sid, post_code),
+        })
+    return result
 
 
 def _make_tx_id(sid: int, item: dict) -> str:
