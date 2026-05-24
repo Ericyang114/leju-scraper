@@ -753,9 +753,11 @@ def search_communities(query: str, limit: int = 8) -> list:
               AND t.community IS NOT NULL
               AND t.community != ''
             GROUP BY t.community, t.sid, s.name, s.post_code
-            ORDER BY tx_count DESC
+            ORDER BY
+              CASE WHEN t.community = {PH} THEN 0 ELSE 1 END,
+              tx_count DESC
             LIMIT {PH}
-        """, (three_yr, q, limit))
+        """, (three_yr, q, query, limit))
 
 
 def get_community_quarterly_trend(name: str, sid: int = None) -> list:
