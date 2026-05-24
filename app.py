@@ -5,9 +5,13 @@ import functools
 import logging
 import math
 import os
+import re
+import smtplib
 import threading
 import time
 from datetime import date, datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -462,6 +466,87 @@ def api_status():
     return jsonify({"running": _scrape_running, "last_scrape": last})
 
 
+@app.route("/api/subscribe", methods=["POST"])
+def api_subscribe():
+    """訂閱社區行情通知。"""
+    data      = request.get_json(force=True, silent=True) or {}
+    email     = (data.get("email") or "").strip().lower()
+    community = (data.get("community") or "").strip()
+    sid_raw   = data.get("sid")
+    sid       = int(sid_raw) if str(sid_raw).isdigit() else None
+
+    if not email or not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        return jsonify({"error": "請輸入有效的 Email"}), 400
+    if not community:
+        return jsonify({"error": "社區名稱不能空白"}), 400
+
+    result = db.add_subscription(email, community, sid)
+    if result == "created":
+        return jsonify({"status": "ok", "message": f"已訂閱！有新成交時會寄信到 {email}"})
+    else:
+        return jsonify({"status": "exists", "message": "您已訂閱此社區，無需重複訂閱"})
+
+
+# ── Email 通知（由 push-data 完成後觸發）────────────────────────────────────
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("SMTP_USER", "")
+SMTP_PASS = os.environ.get("SMTP_PASS", "")
+NOTIFY_FROM = os.environ.get("NOTIFY_FROM", SMTP_USER)
+SITE_URL = os.environ.get("RENDER_URL", "https://leju-scraper.onrender.com")
+
+
+def _send_notify_emails():
+    """查出有新成交的訂閱，寄通知信，更新 latest_seen。"""
+    if not SMTP_USER or not SMTP_PASS:
+        return   # 未設定 SMTP，跳過
+    try:
+        subs = db.get_subscriptions_needing_notify()
+        if not subs:
+            return
+        # 依訂閱 id 分組，每個訂閱最多寄一封
+        seen_ids = {}
+        for row in subs:
+            sid = row["id"]
+            if sid not in seen_ids:
+                seen_ids[sid] = row
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASS)
+            for sub_id, row in seen_ids.items():
+                community = row["community"]
+                email     = row["email"]
+                new_date  = row["new_date"]
+                link      = f"{SITE_URL}/?q={community}&sid={row['sid'] or ''}"
+                msg = MIMEMultipart("alternative")
+                msg["Subject"] = f"【老楊房快說】{community} 有新成交記錄！"
+                msg["From"]    = f"老楊房快說 <{NOTIFY_FROM}>"
+                msg["To"]      = email
+                html = f"""
+                <div style="font-family:sans-serif;max-width:480px;margin:auto;">
+                  <div style="background:#1a7a56;color:#fff;padding:1rem 1.4rem;border-radius:8px 8px 0 0;">
+                    <b>老楊房快說</b> · 社區行情通知
+                  </div>
+                  <div style="padding:1.2rem 1.4rem;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+                    <p>您訂閱的 <b>{community}</b> 有新的成交記錄（{new_date}）。</p>
+                    <a href="{link}" style="display:inline-block;background:#b8922a;color:#fff;padding:.5rem 1.2rem;border-radius:6px;text-decoration:none;font-weight:700;">查看最新行情</a>
+                    <p style="margin-top:1.2rem;font-size:.78rem;color:#999;">
+                      永慶不動產 楊肇寧｜0935-195-944<br>
+                      若不想再收到通知，請回覆此信。
+                    </p>
+                  </div>
+                </div>"""
+                msg.attach(MIMEText(html, "html", "utf-8"))
+                try:
+                    server.sendmail(NOTIFY_FROM, email, msg.as_string())
+                    db.update_subscription_seen(sub_id, new_date)
+                    logging.info("寄出訂閱通知：%s → %s", community, email)
+                except Exception as e:
+                    logging.warning("寄信失敗：%s", e)
+    except Exception as e:
+        logging.warning("_send_notify_emails 失敗：%s", e)
+
+
 @app.route("/api/push-data", methods=["POST"])
 def api_push_data():
     """本機爬蟲推送資料到雲端的接口（需 X-Api-Key 驗證）。"""
@@ -485,6 +570,8 @@ def api_push_data():
         db.log_scrape(info["status"], info.get("message", ""), info.get("records_count", len(txs)))
     if subareas or txs:
         _invalidate_cache()   # 新資料推入後清除快取
+        if txs:
+            threading.Thread(target=_send_notify_emails, daemon=True).start()
 
     return jsonify({"status": "ok", "subareas": len(subareas),
                     "transactions": len(txs), "coords": len(coords)})

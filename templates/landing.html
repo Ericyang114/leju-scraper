@@ -712,6 +712,16 @@
       <button class="btn-print-est no-print" id="btn_print_est" style="display:none;" onclick="printEstimate()">
         🖨️ 列印 / 儲存 PDF
       </button>
+      <!-- 訂閱表單 -->
+      <div id="est_subscribe_wrap" style="display:none;margin-top:.6rem;">
+        <div style="font-size:.72rem;color:var(--mute);margin-bottom:.3rem;">📬 有新成交時寄信通知我</div>
+        <div style="display:flex;gap:.4rem;">
+          <input type="email" id="est_sub_email" placeholder="你的 Email" autocomplete="email"
+                 style="flex:1;border:1px solid #ced4da;border-radius:6px;padding:.35rem .6rem;font-size:.8rem;">
+          <button onclick="submitSubscribe()" style="background:#1a7a56;color:#fff;border:none;border-radius:6px;padding:.35rem .8rem;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap;">訂閱</button>
+        </div>
+        <div id="est_sub_msg" style="font-size:.72rem;margin-top:.25rem;color:var(--mute);"></div>
+      </div>
     </div>
     <!-- 社區比較面板 -->
     <div class="cmp-panel" id="est_cmp_panel" style="display:none;">
@@ -1636,6 +1646,28 @@ function printEstimate() {
   window.print();
 }
 
+async function submitSubscribe() {
+  const email = document.getElementById('est_sub_email').value.trim();
+  const name  = document.getElementById('est_community').value.trim();
+  const sid   = document.getElementById('est_sid').value.trim();
+  const msg   = document.getElementById('est_sub_msg');
+  if (!email) { msg.textContent = '請輸入 Email'; msg.style.color = '#c0392b'; return; }
+  msg.textContent = '訂閱中…'; msg.style.color = 'var(--mute)';
+  try {
+    const res = await fetch('/api/subscribe', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email, community: name, sid: sid || null})
+    });
+    const d = await res.json();
+    msg.textContent = d.message || '完成';
+    msg.style.color = res.ok ? '#1a7a56' : '#c0392b';
+  } catch(e) {
+    msg.textContent = '網路錯誤，請稍後再試';
+    msg.style.color = '#c0392b';
+  }
+}
+
 function setParkingCount(n) {
   _estParking = n;
   [0, 1, 2].forEach(i =>
@@ -1706,6 +1738,7 @@ async function doEstimate() {
   document.getElementById('btn_add_cmp').style.display = 'none';
   document.getElementById('btn_share_line').style.display = 'none';
   document.getElementById('btn_print_est').style.display = 'none';
+  document.getElementById('est_subscribe_wrap').style.display = 'none';
   _printEstData = null;
   if (!name) {
     box.classList.add('show');
@@ -1730,6 +1763,7 @@ async function doEstimate() {
           document.getElementById('btn_add_cmp').style.display = 'none';
   document.getElementById('btn_share_line').style.display = 'none';
   document.getElementById('btn_print_est').style.display = 'none';
+  document.getElementById('est_subscribe_wrap').style.display = 'none';
   _printEstData = null;
       return;
     }
@@ -1850,6 +1884,7 @@ async function doEstimate() {
       document.getElementById('btn_share_line').style.display = '';
       _printEstData = d;
       document.getElementById('btn_print_est').style.display = '';
+      document.getElementById('est_subscribe_wrap').style.display = '';
     }
 
     // ── 比較按鈕 ────────────────────────────────────────────────

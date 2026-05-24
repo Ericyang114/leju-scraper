@@ -144,6 +144,17 @@ def init_db():
                     PRIMARY KEY (community, sid)
                 )
             """)
+            _exec(conn, """
+                CREATE TABLE IF NOT EXISTS subscriptions (
+                    id           SERIAL PRIMARY KEY,
+                    email        TEXT NOT NULL,
+                    community    TEXT NOT NULL,
+                    sid          INTEGER,
+                    latest_seen  TEXT,
+                    created_at   TEXT NOT NULL,
+                    UNIQUE(email, community)
+                )
+            """)
             # 從現有 raw_data 反填座標（只填尚未有記錄的）
             _exec(conn, """
                 INSERT INTO community_coords (community, sid, lat, lon)
@@ -204,6 +215,15 @@ def init_db():
                     lat       REAL,
                     lon       REAL,
                     PRIMARY KEY (community, sid)
+                );
+                CREATE TABLE IF NOT EXISTS subscriptions (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email        TEXT NOT NULL,
+                    community    TEXT NOT NULL,
+                    sid          INTEGER,
+                    latest_seen  TEXT,
+                    created_at   TEXT NOT NULL,
+                    UNIQUE(email, community)
                 );
             """)
             try:
@@ -1072,6 +1092,62 @@ def get_subarea_temperature(sid: int) -> dict:
         "cur_from":  cur_from,
         "prev_from": prev_from,
     }
+
+
+def add_subscription(email: str, community: str, sid: int = None) -> str:
+    """新增訂閱。回傳 'created' 或 'exists'。"""
+    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    # 取該社區目前最新成交日期作為 latest_seen 基準
+    with get_conn() as conn:
+        row = _row(conn, f"""
+            SELECT transaction_date FROM transactions
+            WHERE community={PH} {"AND sid="+PH if sid else ""}
+            ORDER BY transaction_date DESC LIMIT 1
+        """, (community, sid) if sid else (community,))
+        latest = row["transaction_date"] if row else None
+        try:
+            if IS_POSTGRES:
+                _exec(conn, f"""
+                    INSERT INTO subscriptions (email, community, sid, latest_seen, created_at)
+                    VALUES ({PH},{PH},{PH},{PH},{PH})
+                    ON CONFLICT (email, community) DO NOTHING
+                """, (email, community, sid, latest, now))
+                with conn.cursor() as cur:
+                    cur.execute("SELECT COUNT(*) FROM subscriptions WHERE email=%s AND community=%s AND created_at=%s", (email, community, now))
+                    created = cur.fetchone()[0] > 0
+            else:
+                try:
+                    conn.execute("""
+                        INSERT OR IGNORE INTO subscriptions (email, community, sid, latest_seen, created_at)
+                        VALUES (?,?,?,?,?)
+                    """, (email, community, sid, latest, now))
+                    created = conn.total_changes > 0
+                except Exception:
+                    created = False
+        except Exception:
+            created = False
+    return "created" if created else "exists"
+
+
+def get_subscriptions_needing_notify() -> list:
+    """查出所有有新成交（比 latest_seen 新）的訂閱。"""
+    with get_conn() as conn:
+        return _rows(conn, f"""
+            SELECT s.id, s.email, s.community, s.sid, s.latest_seen,
+                   t.transaction_date AS new_date,
+                   t.unit_price
+            FROM subscriptions s
+            JOIN transactions t ON t.community = s.community
+              AND (s.sid IS NULL OR t.sid = s.sid)
+              AND t.transaction_date > COALESCE(s.latest_seen, '000/00')
+              AND (t.is_special_trade IS NULL OR t.is_special_trade = 0)
+            ORDER BY s.id, t.transaction_date DESC
+        """, ())
+
+
+def update_subscription_seen(sub_id: int, latest_date: str):
+    with get_conn() as conn:
+        _exec(conn, f"UPDATE subscriptions SET latest_seen={PH} WHERE id={PH}", (latest_date, sub_id))
 
 
 def clear_scrape_log():
