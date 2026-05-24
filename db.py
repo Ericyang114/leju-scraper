@@ -1039,33 +1039,46 @@ def get_subarea_by_sid(sid: int) -> dict | None:
 
 
 def get_subarea_temperature(sid: int) -> dict:
-    """計算生活圈市場溫度：比較近3個月 vs 前3個月成交量。
-    回傳 level ('hot'|'warm'|'cold')、近期筆數、前期筆數。
+    """成交年比趨勢：近12個月 vs 去年同期12個月。
+    實價登錄有 3–6 個月申報延遲，用年比消除季節因素、拉大窗口降低影響。
+    回傳 level ('hot'|'warm'|'cold')、兩期筆數、年增率、期間說明。
     """
-    from datetime import date
     today = date.today()
 
     def _roc_month(offset_months: int) -> str:
-        """回傳 offset_months 個月前的 ROC 日期字串 YYY/MM"""
         y = today.year
         m = today.month - offset_months
         while m <= 0:
             m += 12; y -= 1
         return f"{y - 1911}/{m:02d}"
 
-    cur_from  = _roc_month(3)   # 近3個月起點
-    prev_from = _roc_month(6)   # 前3個月起點
-    prev_to   = _roc_month(3)   # 前3個月終點（同 cur_from）
+    # 近12個月：從12個月前到今天（實際上最近幾個月資料尚未完整登錄）
+    cur_from  = _roc_month(12)
+    cur_to    = _roc_month(0)   # 今天所在月份
+
+    # 去年同期12個月
+    prev_from = _roc_month(24)
+    prev_to   = _roc_month(12)
+
+    # 顯示用期間標籤（ROC 轉西元年方便閱讀）
+    def _roc_to_label(roc: str) -> str:
+        parts = roc.split("/")
+        return f"{int(parts[0])+1911}/{parts[1]}"
+
+    cur_label  = f"{_roc_to_label(cur_from)}–{_roc_to_label(cur_to)}"
+    prev_label = f"{_roc_to_label(prev_from)}–{_roc_to_label(prev_to)}"
 
     with get_conn() as conn:
         cur_row = _row(conn, f"""
             SELECT COUNT(*) AS cnt FROM transactions
-            WHERE sid={PH} AND transaction_date>={PH}
+            WHERE sid={PH}
+              AND transaction_date>={PH} AND transaction_date<{PH}
               AND (is_special_trade IS NULL OR is_special_trade=0)
-        """, (sid, cur_from))
+        """, (sid, cur_from, cur_to))
         prev_row = _row(conn, f"""
             SELECT COUNT(*) AS cnt FROM transactions
-            WHERE sid={PH} AND transaction_date>={PH} AND transaction_date<{PH}
+            WHERE sid={PH}
+              AND transaction_date>={PH} AND transaction_date<{PH}
               AND (is_special_trade IS NULL OR is_special_trade=0)
         """, (sid, prev_from, prev_to))
 
@@ -1074,23 +1087,26 @@ def get_subarea_temperature(sid: int) -> dict:
 
     if prev_cnt == 0:
         ratio = 1.0
+        pct   = None
     else:
         ratio = cur_cnt / prev_cnt
+        pct   = round((ratio - 1) * 100)
 
-    if ratio >= 1.25:
+    if ratio >= 1.15:
         level = "hot"
-    elif ratio <= 0.75:
+    elif ratio <= 0.85:
         level = "cold"
     else:
         level = "warm"
 
     return {
-        "level":     level,
-        "cur_cnt":   cur_cnt,
-        "prev_cnt":  prev_cnt,
-        "ratio":     round(ratio, 2),
-        "cur_from":  cur_from,
-        "prev_from": prev_from,
+        "level":      level,
+        "cur_cnt":    cur_cnt,
+        "prev_cnt":   prev_cnt,
+        "ratio":      round(ratio, 2),
+        "pct":        pct,          # 年增率 %（None 表示去年無資料）
+        "cur_label":  cur_label,
+        "prev_label": prev_label,
     }
 
 

@@ -135,13 +135,22 @@
       桃園區（郵遞區號 {{ subarea.post_code }}）　符合條件 {{ total }} 筆
     </p>
     {% if temperature %}
+      {% set pct = temperature.pct %}
+      {% set pct_str = ('＋' + pct|string + '%') if pct and pct > 0 else (pct|string + '%') if pct is not none and pct != 0 else '—' %}
       {% if temperature.level == 'hot' %}
-        <div class="temp-badge temp-hot">🔥 市場熱絡　近3月 {{ temperature.cur_cnt }} 筆 vs 前3月 {{ temperature.prev_cnt }} 筆（+{{ ((temperature.ratio - 1) * 100)|int }}%）</div>
+        <div class="temp-badge temp-hot" title="實價登錄通常延遲3–6個月，資料反映約半年前至一年前的市場狀況">
+          🔥 成交年增　{{ temperature.cur_cnt }} 筆 vs 去年同期 {{ temperature.prev_cnt }} 筆（{{ pct_str }}）
+        </div>
       {% elif temperature.level == 'cold' %}
-        <div class="temp-badge temp-cold">❄️ 市場冷靜　近3月 {{ temperature.cur_cnt }} 筆 vs 前3月 {{ temperature.prev_cnt }} 筆（{{ ((temperature.ratio - 1) * 100)|int }}%）</div>
+        <div class="temp-badge temp-cold" title="實價登錄通常延遲3–6個月，資料反映約半年前至一年前的市場狀況">
+          ❄️ 成交年減　{{ temperature.cur_cnt }} 筆 vs 去年同期 {{ temperature.prev_cnt }} 筆（{{ pct_str }}）
+        </div>
       {% else %}
-        <div class="temp-badge temp-warm">➡️ 交易持平　近3月 {{ temperature.cur_cnt }} 筆 vs 前3月 {{ temperature.prev_cnt }} 筆</div>
+        <div class="temp-badge temp-warm" title="實價登錄通常延遲3–6個月，資料反映約半年前至一年前的市場狀況">
+          ➡️ 交易持平　{{ temperature.cur_cnt }} 筆 vs 去年同期 {{ temperature.prev_cnt }} 筆（{{ pct_str }}）
+        </div>
       {% endif %}
+      <div style="font-size:.65rem;opacity:.65;margin-top:.2rem;">📋 近12個月 {{ temperature.cur_label }} vs 去年同期　資料延遲約3–6個月</div>
     {% endif %}
   </div>
 </div>
