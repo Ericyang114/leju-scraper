@@ -117,7 +117,7 @@ NTPC_DISTRICTS = [
     {"name": "鶯歌區", "post_code": "239"},
 ]
 
-_POST_CODE_MAP = {d["post_code"]: d["name"] for d in TAOYUAN_DISTRICTS}
+_POST_CODE_MAP = {d["post_code"]: d["name"] for d in TAOYUAN_DISTRICTS + NTPC_DISTRICTS}
 
 DISTRICT_INFO = {
     "桃園區": {
@@ -328,6 +328,8 @@ def subarea(sid):
     )
     temperature = db.get_subarea_temperature(sid)
 
+    district_name = _POST_CODE_MAP.get(sa.get("post_code", ""), "桃園市")
+
     return render_template(
         "subarea.html",
         subarea=sa,
@@ -345,6 +347,7 @@ def subarea(sid):
         filtered_stats=filtered_stats,
         trend=trend,
         temperature=temperature,
+        district_name=district_name,
     )
 
 
@@ -379,6 +382,8 @@ def community(sid):
     )
     total_pages = max(1, math.ceil(total / per_page))
 
+    district_name = _POST_CODE_MAP.get(sa.get("post_code", ""), "桃園市")
+
     return render_template(
         "community.html",
         subarea=sa,
@@ -393,6 +398,7 @@ def community(sid):
         special_filter=special_filter,
         date_from=date_from,
         date_to=date_to,
+        district_name=district_name,
     )
 
 

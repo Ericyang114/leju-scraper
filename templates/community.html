@@ -3,7 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ community_name }} · 社區行情 - 桃園區</title>
+  <title>{{ community_name }}實價登錄｜{{ district_name }}{{ subarea.name }}社區行情 - 老楊房快說</title>
+  <meta name="description" content="{{ community_name }}最新實價登錄查詢，位於{{ district_name }}{{ subarea.name }}。查看近期成交單價、總價區間與歷年走勢，由永慶不動產楊肇寧整理提供。">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://leju-scraper.onrender.com/community/{{ subarea.sid }}?name={{ community_name | urlencode }}">
+  <meta property="og:type"        content="website">
+  <meta property="og:url"         content="https://leju-scraper.onrender.com/community/{{ subarea.sid }}?name={{ community_name | urlencode }}">
+  <meta property="og:title"       content="{{ community_name }}實價登錄｜{{ district_name }}{{ subarea.name }}社區行情">
+  <meta property="og:description" content="{{ community_name }}近期成交單價與走勢，{{ district_name }}{{ subarea.name }}最即時實價登錄資訊。">
+  <meta property="og:image"       content="https://leju-scraper.onrender.com/static/images/avatar.png">
+  <meta property="og:locale"      content="zh_TW">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <style>
@@ -113,7 +122,7 @@
     </nav>
     <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
       <div>
-        <h1>{{ community_name }} · 社區行情</h1>
+        <h1>{{ community_name }}實價登錄｜{{ district_name }}社區行情</h1>
         <p class="mb-0" style="font-size:.82rem; opacity:.8;">
           {{ subarea.name }}　共 {{ total }} 筆成交記錄
           {% if stats.earliest_date and stats.latest_date %}
