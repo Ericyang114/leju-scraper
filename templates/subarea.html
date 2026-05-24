@@ -159,7 +159,7 @@
           ➡️ 交易持平　{{ temperature.cur_cnt }} 筆 vs 去年同期 {{ temperature.prev_cnt }} 筆（{{ pct_str }}）
         </div>
       {% endif %}
-      <div style="font-size:.65rem;opacity:.65;margin-top:.2rem;">📋 近12個月 {{ temperature.cur_label }} vs 去年同期　資料延遲約3–6個月</div>
+      <div style="font-size:.65rem;opacity:.65;margin-top:.2rem;">📋 {{ temperature.cur_label }} vs {{ temperature.prev_label }}（排除近3個月未完整登錄資料）</div>
     {% endif %}
   </div>
 </div>

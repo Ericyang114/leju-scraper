@@ -1055,13 +1055,15 @@ def get_subarea_temperature(sid: int) -> dict:
             m += 12; y -= 1
         return f"{y - 1911}/{m:02d}"
 
-    # 近12個月：從12個月前到今天（實際上最近幾個月資料尚未完整登錄）
-    cur_from  = _roc_month(12)
-    cur_to    = _roc_month(0)   # 今天所在月份
+    DELAY = 3   # 固定往前移 3 個月，避開尚未完整登錄的近期月份
+
+    # 近12個月（可靠期間）：截止到 3 個月前（例：今天5月 → 截止2月）
+    cur_from  = _roc_month(12 + DELAY)
+    cur_to    = _roc_month(DELAY)
 
     # 去年同期12個月
-    prev_from = _roc_month(24)
-    prev_to   = _roc_month(12)
+    prev_from = _roc_month(24 + DELAY)
+    prev_to   = _roc_month(12 + DELAY)
 
     # 顯示用期間標籤（ROC 轉西元年方便閱讀）
     def _roc_to_label(roc: str) -> str:
