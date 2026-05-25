@@ -326,8 +326,6 @@ def subarea(sid):
         age_filter=age_filter, type_filter=type_filter,
         special_filter=special_filter, date_from=date_from, date_to=date_to,
     )
-    temperature = db.get_subarea_temperature(sid)
-
     district_name = _POST_CODE_MAP.get(sa.get("post_code", ""), "桃園市")
 
     return render_template(
@@ -346,7 +344,6 @@ def subarea(sid):
         bldg_types=bldg_types,
         filtered_stats=filtered_stats,
         trend=trend,
-        temperature=temperature,
         district_name=district_name,
     )
 
