@@ -907,7 +907,8 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
     with get_conn() as conn:
         c_rows = _rows(conn, f"""
             SELECT community, total_price, total_area,
-                   parking_price, parking_area, transaction_date, age, building_type
+                   parking_price, parking_area, transaction_date, age, building_type,
+                   address
             FROM transactions WHERE {" AND ".join(c_cl)} {age_clause}
             ORDER BY transaction_date DESC
         """, c_p)
@@ -921,6 +922,26 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
 
     if not c_rows and not n_rows:
         return {"community": name, "tx_count": 0}
+
+    # ── A：同地址 6 個月內短期轉手偵測，只保留最新一筆 ─────────────
+    _seen_addr: dict = {}   # address → (months_ago, index)
+    _flip_removed = 0
+    _c_rows_deduped = []
+    for r in c_rows:
+        addr = (r.get("address") or "").strip()
+        if not addr:
+            _c_rows_deduped.append(r)
+            continue
+        ma = _months_ago(r["transaction_date"])
+        if addr in _seen_addr:
+            prev_ma = _seen_addr[addr]
+            if abs(prev_ma - ma) <= 6:
+                # 同地址6個月內重複 → 跳過這筆（c_rows 已按日期降序，舊的在後面）
+                _flip_removed += 1
+                continue
+        _seen_addr[addr] = ma
+        _c_rows_deduped.append(r)
+    c_rows = _c_rows_deduped
 
     # ── 同社區調整單價 + IQR 過濾 ─────────────────────────────────
     c_prices = [(p, r["transaction_date"])
@@ -957,6 +978,9 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
 
     all_n_prices = [(p, r["transaction_date"])
                     for r in n_rows if (p := _adj_price(r)) is not None]
+
+    # ── B（前置）：用「篩選前」的周遭中位數偵測價差，避免被 IQR 篩掉後比不到 ──
+    _raw_n_median = statistics.median([p for p, _ in all_n_prices]) if all_n_prices else None
 
     if c_prices and all_n_prices:
         ref  = statistics.median([p for p, _ in c_prices])
@@ -1018,6 +1042,20 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
     else:
         q1_disp = q3_disp = None
 
+    # ── B：社區 vs 周遭價差警示（用篩選前的周遭中位數，差距 > 25%）────
+    price_warning = None
+    if c_prices and _raw_n_median and _raw_n_median > 0:
+        c_med   = statistics.median([p for p, _ in c_prices])
+        gap_pct = abs(c_med - _raw_n_median) / _raw_n_median
+        if gap_pct > 0.25:
+            direction = "低於" if c_med < _raw_n_median else "高於"
+            price_warning = {
+                "community_median": round(c_med, 1),
+                "nearby_median":    round(_raw_n_median, 1),
+                "gap_pct":          round(gap_pct * 100),
+                "direction":        direction,
+            }
+
     return {
         "community":          (c_rows[0] if c_rows else c_rows_all[0]).get("community", name),
         "tx_count":           len(c_prices),
@@ -1033,6 +1071,8 @@ def get_community_estimate(name: str, sid: int = None) -> dict | None:
         "avg_parking_price":  round(sum(p_prices)/len(p_prices), 0) if p_prices else None,
         "avg_parking_area":   round(sum(p_areas) /len(p_areas),  1) if p_areas  else None,
         "parking_sample":     len(p_prices),
+        "price_warning":      price_warning,
+        "flip_removed":       _flip_removed,
     }
 
 

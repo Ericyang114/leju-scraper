@@ -1941,10 +1941,19 @@ async function doEstimate() {
     }
 
     const nearbyNote = d.tx_nearby > 0 ? `＋周遭 ${d.tx_nearby} 筆` : '';
+    const flipNote   = d.flip_removed > 0 ? `（已排除 ${d.flip_removed} 筆短期轉手）` : '';
     const filterNote = d.tx_raw > d.tx_count ? `（已自動排除異常成交）` : '';
     const sourceNote = hasCommunity
-      ? `📊 根據 <b>${d.tx_count}</b> 筆近期${d.community}實價登錄資料${filterNote}${nearbyNote}`
+      ? `📊 根據 <b>${d.tx_count}</b> 筆近期${d.community}實價登錄資料${filterNote}${flipNote}${nearbyNote}`
       : `📊 ${d.community} 近2年無成交記錄，依同生活圈 <b>${d.tx_nearby}</b> 筆周遭行情推估`;
+
+    // ── 價差警示 ────────────────────────────────────────────────────
+    const priceWarnHtml = (d.price_warning && d.tx_count > 0) ? `
+      <div style="margin:.5rem 0;padding:.5rem .8rem;background:#fff3cd;border-left:3px solid #f59e0b;border-radius:0 6px 6px 0;font-size:.72rem;color:#92400e;line-height:1.65;">
+        ⚠️ <b>注意：</b>此社區登錄成交（${d.price_warning.community_median}萬/坪）
+        ${d.price_warning.direction}同生活圈周遭行情中位數（${d.price_warning.nearby_median}萬/坪）約
+        <b>${d.price_warning.gap_pct}%</b>，成交資料可能不具代表性，建議實際查詢後再參考。
+      </div>` : '';
 
     // ── 可信度分級 ──────────────────────────────────────────────────
     const _sampleN = hasCommunity ? (d.tx_count + (d.tx_nearby || 0)) : (d.tx_nearby || 0);
@@ -1969,6 +1978,7 @@ async function doEstimate() {
         <div style="font-size:.7rem;color:var(--mute);">${sourceNote} · 最新：${d.latest_date || '—'}</div>
         ${confBadge}
       </div>
+      ${priceWarnHtml}
       <div class="result-row"><span>近2年成交單價區間</span>
         <span style="color:var(--navy);font-weight:700;">${d.q1 ?? lo} – ${d.q3 ?? hi} <small style="font-weight:400;color:var(--mute);">萬/坪</small></span>
       </div>
