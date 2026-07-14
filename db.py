@@ -123,6 +123,15 @@ def init_db():
                     scraped_at       TEXT
                 )
             """)
+            _exec(conn, "ALTER TABLE transactions ADD COLUMN IF NOT EXISTS is_special_trade INTEGER DEFAULT 0")
+            _exec(conn, """
+                UPDATE transactions
+                SET is_special_trade = CAST(raw_data::jsonb->>'is_special_trade' AS INTEGER)
+                WHERE is_special_trade IS NULL
+                  AND raw_data IS NOT NULL
+                  AND raw_data <> ''
+                  AND raw_data::jsonb->>'is_special_trade' IS NOT NULL
+            """)
             _exec(conn, "CREATE INDEX IF NOT EXISTS idx_tx_sid     ON transactions(sid)")
             _exec(conn, "CREATE INDEX IF NOT EXISTS idx_tx_date    ON transactions(transaction_date DESC)")
             _exec(conn, "CREATE INDEX IF NOT EXISTS idx_tx_special ON transactions(is_special_trade)")
