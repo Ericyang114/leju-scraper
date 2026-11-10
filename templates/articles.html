@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-hero">
+  <div class="wrap">
+    <p class="crumbs"><a href="/">首頁</a> ／ 避坑攻略</p>
+    <h1>避坑攻略</h1>
+    <p>買方可以先看<a href="/inspection">看屋注意事項完整清單</a>。屋主文章會在確認後才上架。</p>
+  </div>
+</section>
+<section class="section" style="padding-top:0;">
+  <div class="wrap card-grid">
+    {% for item in articles %}
+    <a class="service-card" href="/articles/{{ item.slug }}">
+      <p class="cat">{{ item.category }}</p>
+      <h2>{{ item.title }}</h2>
+      <p>{{ item.summary }}</p>
+    </a>
+    {% else %}
+    <div class="empty">目前沒有上架的文章。</div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

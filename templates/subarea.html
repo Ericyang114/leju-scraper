@@ -3,16 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ subarea.name }}實價登錄｜{{ district_name }}房價行情 - 老楊房快說</title>
-  <meta name="description" content="{{ subarea.name }}最新實價登錄查詢，{{ district_name }}房價行情統計。收錄近期成交資料，含單價區間、成交走勢與社區比較，由永慶不動產楊肇寧整理提供。">
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://leju-scraper.onrender.com/subarea/{{ subarea.sid }}">
-  <meta property="og:type"        content="website">
-  <meta property="og:url"         content="https://leju-scraper.onrender.com/subarea/{{ subarea.sid }}">
-  <meta property="og:title"       content="{{ subarea.name }}實價登錄｜{{ district_name }}房價行情">
-  <meta property="og:description" content="{{ subarea.name }}近期成交單價區間與房價走勢，{{ district_name }}最即時實價登錄資訊。">
-  <meta property="og:image"       content="https://leju-scraper.onrender.com/static/images/avatar.png">
-  <meta property="og:locale"      content="zh_TW">
+  {% set seo_title = subarea.name ~ "房價・" ~ district_name ~ "實價登錄｜老楊房快說" %}
+  {% set seo_description = subarea.name ~ "實價登錄與房價行情，" ~ district_name ~ "近期成交、單價區間與走勢。資料整理自內政部實價登錄，老楊房快說楊肇寧。" %}
+  {% set seo_path = "/subarea/" ~ subarea.sid %}
+  {% set crumbs = [("首頁", "/"), (district_name ~ "房價", "/price/" ~ district_name), (subarea.name, "")] %}
+  {% include "partials/meta.html" %}
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <style>
@@ -125,6 +120,7 @@
     </style>
 </head>
 <body>
+{% include "partials/nav.html" %}
 
 <!-- Hero -->
 <div class="hero">
@@ -455,5 +451,6 @@ function setPeriod(n, unit) {
 })();
 {% endif %}
 </script>
+{% include "partials/footer.html" %}
 </body>
 </html>

@@ -1,0 +1,35 @@
+{% extends "cms/base.html" %}
+{% block title %}物件管理{% endblock %}
+{% block content %}
+<h1>在售物件</h1>
+<p><a class="site-btn site-btn-red" href="/admin/listings/new">新增物件</a></p>
+<p class="note">照片存在資料庫，重新部署不會不見。示範資料預設不上架，標題含「示範」也不能上架。請換成真實物件後再改狀態。</p>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>照片</th><th>標題</th><th>狀態</th><th>區</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{% if row.cover_id %}<img class="thumb" src="/media/{{ row.cover_id }}" alt="">{% else %}—{% endif %}</td>
+        <td>
+          {{ row.title }}
+          {% if row.is_demo %}<span class="badge warn">示範・未上架</span>{% endif %}
+          <div class="meta">{{ row.photo_count }} 張照片</div>
+        </td>
+        <td>
+          {% if row.status == 'published' %}<span class="badge on">上架</span>
+          {% elif row.status == 'archived' %}<span class="badge">下架</span>
+          {% else %}<span class="badge">草稿</span>{% endif %}
+        </td>
+        <td>{{ row.district }}</td>
+        <td><a href="/admin/listings/{{ row.id }}">編輯</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">還沒有物件。</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

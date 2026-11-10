@@ -1,0 +1,50 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
+<header class="site-nav" id="site-nav">
+  <div class="nav-top">
+    <a class="nav-brand" href="/">
+      <span class="nav-mark">老楊</span>
+      <span>
+        <strong>老楊房快說</strong>
+        <small>永慶不動產 · 營業員 {{ site.name }}</small>
+      </span>
+    </a>
+    <div class="nav-top-actions">
+      <a class="nav-icon" href="tel:{{ site.phone_tel }}">電話</a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-panel">選單</button>
+    </div>
+  </div>
+  <nav id="nav-panel" class="nav-panel" aria-label="主要">
+    <a href="/about" {% if request.path == '/about' %}aria-current="page"{% endif %}>關於</a>
+    <div class="nav-drop">
+      <a href="/services" {% if request.path.startswith('/services') %}aria-current="page"{% endif %}>服務</a>
+      <div class="nav-sub">
+        <a href="/services/buy">買房規劃</a>
+        <a href="/services/sell">屋主售屋</a>
+        <a href="/services/swap">換屋銜接</a>
+        <a href="/services/invest">置產評估</a>
+      </div>
+    </div>
+    <a href="/tools" {% if request.path == '/tools' %}aria-current="page"{% endif %}>試算工具</a>
+    <a href="/price" {% if request.path.startswith('/price') or request.path.startswith('/subarea') or request.path.startswith('/community') or request.path == '/redevelopment' %}aria-current="page"{% endif %}>行情</a>
+    <a href="/listings" {% if request.path.startswith('/listings') %}aria-current="page"{% endif %}>物件</a>
+    <a href="/articles" {% if request.path.startswith('/articles') or request.path == '/inspection' %}aria-current="page"{% endif %}>攻略</a>
+    <a href="/testimonials" {% if request.path == '/testimonials' %}aria-current="page"{% endif %}>見證</a>
+    <a href="/faq" {% if request.path == '/faq' %}aria-current="page"{% endif %}>FAQ</a>
+    <a href="/contact" {% if request.path == '/contact' %}aria-current="page"{% endif %}>聯絡</a>
+    <a class="site-btn site-btn-line nav-cta" href="{{ site.line_url }}" target="_blank" rel="noopener">加 LINE</a>
+  </nav>
+</header>
+<script>
+if (!window.__siteNav) {
+  window.__siteNav = true;
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest && e.target.closest(".nav-toggle");
+    if (!btn) return;
+    var nav = document.getElementById("site-nav");
+    var open = nav.classList.toggle("is-open");
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+}
+</script>

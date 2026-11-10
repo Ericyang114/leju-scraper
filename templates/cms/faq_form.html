@@ -1,0 +1,21 @@
+{% extends "cms/base.html" %}
+{% block title %}編輯 FAQ{% endblock %}
+{% block content %}
+{% set v = item or {} %}
+<h1>{% if v.id %}編輯 FAQ{% else %}新增 FAQ{% endif %}</h1>
+<form class="stack-form card" method="post">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <label>分類<input name="category" value="{{ v.category or '' }}" placeholder="買方／屋主／換屋／置產／諮詢"></label>
+  <label>問題<input name="question" required value="{{ v.question or '' }}"></label>
+  <label>回答<textarea name="answer" required>{{ v.answer or '' }}</textarea></label>
+  <label>排序<input name="sort_order" value="{{ v.sort_order if v.sort_order is not none else 0 }}"></label>
+  <label class="check"><input type="checkbox" name="published" {% if v.published is not defined or v.published|string in ['1','on','true'] %}checked{% endif %}> 公開</label>
+  <button class="site-btn site-btn-red" type="submit">儲存</button>
+</form>
+{% if v.id %}
+<form method="post" action="/admin/faqs/{{ v.id }}/delete" onsubmit="return confirm('刪除這題？');">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <button class="site-btn site-btn-ghost" type="submit">刪除</button>
+</form>
+{% endif %}
+{% endblock %}
