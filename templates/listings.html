@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-hero">
+  <div class="wrap">
+    <p class="crumbs"><a href="/">首頁</a> ／ 在售物件</p>
+    <h1>在售物件</h1>
+    <p>這裡只放已上架的物件。沒有看到適合的，傳區域和預算給我。</p>
+  </div>
+</section>
+<section class="section" style="padding-top:0;">
+  <div class="wrap">
+    {% if listings %}
+    <div class="card-grid">
+      {% for item in listings %}
+      <a class="listing-card" href="/listings/{{ item.id }}">
+        {% if item.cover_id %}<img src="/media/{{ item.cover_id }}" alt="">{% endif %}
+        <div>
+          <h2>{{ item.title }}</h2>
+          <p class="meta">{{ item.district }} {% if item.layout %}· {{ item.layout }}{% endif %} {% if item.ping %}· {{ item.ping }}{% endif %}</p>
+          {% if item.price_label %}<p class="price">{{ item.price_label }}</p>{% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">目前沒有上架中的物件。</div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ seo.title }}</title>
+  <meta name="description" content="{{ seo.description }}">
+  <meta name="robots" content="{{ seo.robots or 'index, follow' }}">
+  <link rel="canonical" href="{{ site_url }}{{ seo.path }}">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="zh_TW">
+  <meta property="og:site_name" content="老楊房快說">
+  <meta property="og:title" content="{{ seo.title }}">
+  <meta property="og:description" content="{{ seo.description }}">
+  <meta property="og:url" content="{{ site_url }}{{ seo.path }}">
+  <meta property="og:image" content="{{ seo.image or (site_url ~ '/static/images/avatar.png') }}">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" content="#1a2e5a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
+  {% if seo.crumbs %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {% for name, href in seo.crumbs %}
+      {"@type":"ListItem","position":{{ loop.index }},"name":{{ name|tojson }},"item":{{ (site_url ~ (href or seo.path))|tojson }}}{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }
+  </script>
+  {% endif %}
+  {% if page_schema is defined and page_schema %}
+  <script type="application/ld+json">{{ page_schema|tojson }}</script>
+  {% endif %}
+</head>
+<body class="site-body">
+  <a class="skip" href="#main">跳到本文</a>
+  {% include "partials/nav.html" %}
+  {% if preview is defined and preview %}
+  <div class="preview-banner">這是未上架或示範內容，一般訪客看不到。</div>
+  {% endif %}
+  <main id="main">
+    {% block content %}{% endblock %}
+  </main>
+  {% include "partials/footer.html" %}
+  {% include "partials/float.html" %}
+  <script src="{{ url_for('static', filename='site.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

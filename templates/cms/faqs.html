@@ -1,0 +1,21 @@
+{% extends "cms/base.html" %}
+{% block title %}FAQ{% endblock %}
+{% block content %}
+<h1>FAQ</h1>
+<p><a class="site-btn site-btn-red" href="/admin/faqs/new">新增問題</a></p>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>問題</th><th>分類</th><th>狀態</th><th></th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.question }}</td>
+        <td>{{ row.category }}</td>
+        <td>{% if row.published %}公開{% else %}隱藏{% endif %}</td>
+        <td><a href="/admin/faqs/{{ row.id }}">編輯</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

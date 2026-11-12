@@ -3,48 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>楊肇寧 · 老楊房快說 · 永慶不動產 | 桃園新北房產行情工具</title>
-
-  <!-- ── SEO ── -->
-  <meta name="description" content="老楊房快說 · 永慶不動產楊肇寧，提供桃園市、新北市鶯歌區最即時實價登錄查詢、房價行情試算、房貸試算、土地增值稅試算，深耕在地市場，協助您精準掌握買賣行情。">
-  <meta name="keywords" content="桃園房仲,楊肇寧,老楊房快說,永慶不動產,桃園實價登錄,鶯歌房價,行情試算,房貸試算,桃園買房,購屋">
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://leju-scraper.onrender.com/">
-
-  <!-- ── Open Graph（LINE / FB 分享縮圖）── -->
-  <meta property="og:type"        content="website">
-  <meta property="og:url"         content="https://leju-scraper.onrender.com/">
-  <meta property="og:title"       content="老楊房快說 · 楊肇寧 | 桃園新北房產行情工具">
-  <meta property="og:description" content="桃園市、鶯歌區最即時實價登錄查詢 · 行情試算 · 房貸試算 · 土地增值稅試算，深耕在地市場的永慶房仲楊肇寧。">
-  <meta property="og:image"       content="https://leju-scraper.onrender.com/static/images/avatar.png">
-  <meta property="og:image:width" content="400">
-  <meta property="og:image:height" content="400">
-  <meta property="og:locale"      content="zh_TW">
-  <meta property="og:site_name"   content="老楊房快說">
-
-  <!-- ── JSON-LD 結構化資料 ── -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "RealEstateAgent",
-    "name": "楊肇寧｜老楊房快說",
-    "alternateName": "老楊房快說",
-    "description": "深耕桃園市、新北市鶯歌區房產市場，提供最即時、透明的成交實價登錄資訊，協助您精準掌握市場行情，做出最佳置產決策。",
-    "url": "https://leju-scraper.onrender.com/",
-    "telephone": "+886935195944",
-    "address": {
-      "@type": "PostalAddress",
-      "addressLocality": "桃園市",
-      "addressCountry": "TW"
-    },
-    "areaServed": ["桃園市", "新北市鶯歌區"],
-    "memberOf": {
-      "@type": "Organization",
-      "name": "永慶不動產"
-    },
-    "sameAs": []
-  }
-  </script>
+  {% set seo_title = seo_title if seo_title is defined else "桃園房產試算｜房貸・房地合一・土增稅・實價登錄｜老楊房快說" %}
+  {% set seo_description = seo_description if seo_description is defined else "土地增值稅、房地合一、購屋能力、房貸、買賣雜費、坪數與車位換算、行情落點、租金投報，並可查桃園、鶯歌實價登錄。" %}
+  {% set seo_path = seo_path if seo_path is defined else "/tools" %}
+  {% include "partials/meta.html" %}
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -81,6 +43,7 @@
     .tool-section{background:#fff;}
     .tool-header{background:var(--navy);color:var(--gold2);font-size:.82rem;font-weight:700;letter-spacing:.08em;padding:.55rem 1.1rem;display:flex;align-items:center;gap:.4rem;}
     .tab-bar{display:grid;grid-template-columns:repeat(4,1fr);background:#1e2d52;}
+    .panel, .calc-card { scroll-margin-top: 84px; }
     .tab-btn{padding:.52rem .4rem;font-size:.73rem;font-weight:600;color:rgba(255,255,255,.38);cursor:pointer;border:none;background:transparent;border-bottom:3px solid transparent;white-space:nowrap;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:.25rem;text-align:center;}
     .tab-btn:hover{color:rgba(255,255,255,.8);}
     .tab-btn.active{color:#fff;border-bottom-color:var(--gold2);background:rgba(255,255,255,.06);}
@@ -264,46 +227,7 @@
   </style>
 </head>
 <body>
-
-<!-- Top bar -->
-<div class="topbar">
-  <span class="brand">永慶不動產</span>
-  <span class="last-update">
-    {%- if global_stats %}
-      📦 收錄 {{ "{:,}".format(global_stats.total_tx) }} 筆
-      {%- if global_stats.latest_month %} · 最新 {{ global_stats.latest_month }}{% endif %}
-    {%- endif %}
-    {%- if last_scrape %} · 更新：{{ last_scrape.scraped_at[:10] }}{% endif %}
-  </span>
-</div>
-
-<!-- Agent card -->
-<div class="agent-card">
-  <div class="d-flex gap-3 align-items-center mb-2" style="position:relative;z-index:1;">
-    <img src="/static/images/avatar.png" alt="楊肇寧" class="agent-avatar"
-         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-    <div class="agent-avatar-fb">楊</div>
-    <div>
-      <div class="d-flex align-items-baseline gap-2 flex-wrap">
-        <div class="agent-name">楊肇寧</div>
-        <div style="font-size:.78rem;color:var(--gold2);font-weight:600;">老楊房快說</div>
-      </div>
-      <div class="agent-sub">永慶不動產 · 專業經紀人</div>
-    </div>
-  </div>
-  <p class="agent-intro">深耕桃園區房產市場多年，提供最即時、透明的成交實價登錄資訊，<br>協助您精準掌握市場行情，做出最佳置產決策。</p>
-  <div class="d-flex gap-2 flex-wrap" style="position:relative;z-index:1;">
-    <a href="tel:0935195944" class="btn-call">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
-      0935-195-944
-    </a>
-    <a href="https://line.me/ti/p/qkAJ5hcj7m" target="_blank" class="btn-line">
-      <svg width="13" height="13" viewBox="0 0 48 48" fill="currentColor"><path d="M24 4C12.95 4 4 11.86 4 21.5c0 5.9 3.3 11.1 8.4 14.5-.37 1.36-1.34 4.94-1.54 5.7-.24.96.35 1.95 1.31 1.95.25 0 .5-.07.72-.21L19.5 40c1.47.37 3.01.57 4.5.57C34.05 40.57 44 32.71 44 21.5 44 11.86 35.05 4 24 4z"/></svg>
-      加 LINE 好友
-    </a>
-  </div>
-</div>
-<div class="divider-bar"></div>
+{% include "partials/nav.html" %}
 
 <!-- LINE QR Modal -->
 <div class="qr-backdrop" id="lineModal" onclick="if(event.target===this)this.classList.remove('show')">
@@ -321,7 +245,10 @@
 <div class="tool-section">
   <div class="tool-header">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>
-    老楊全能房產實用工具
+    先自己算一遍
+    {%- if global_stats and global_stats.total_tx %}
+      <span style="margin-left:auto;font-weight:500;letter-spacing:0;color:rgba(255,255,255,.85);">收錄 {{ "{:,}".format(global_stats.total_tx) }} 筆{% if last_scrape %} · {{ last_scrape.scraped_at[:10] }}{% endif %}</span>
+    {%- endif %}
   </div>
 
   <!-- Tab bar：4+3 兩排 -->
@@ -600,7 +527,7 @@
   <div class="panel calc-panel" id="panel-calc">
 
     <!-- ── 快速帶入中心 ── -->
-    <div class="calc-card">
+    <div class="calc-card" id="tool-quickfill">
       <h2>🔗 計算機快速帶入</h2>
       <div class="info-box mb-3" style="background:#f0f4ff;border-left-color:#6366f1;">
         填入房屋相關數值後，可一鍵帶入其他計算機，免重複輸入。<br>
@@ -635,7 +562,7 @@
       </div>
     </div>
 
-    <div class="calc-card">
+    <div class="calc-card" id="tool-ping">
       <h2>📐 坪數換算</h2>
       <div class="info-box mb-3" style="background:#fff8e1;">換算公式：1 坪 = 3.30579 平方公尺　／　1 平方公尺 = 0.3025 坪</div>
       <div class="mb-3">
@@ -648,7 +575,7 @@
         <input type="number" id="p_m2" class="form-control form-control-sm" placeholder="0" oninput="m2ToPing()">
       </div>
     </div>
-    <div class="calc-card">
+    <div class="calc-card" id="tool-parking">
       <h2>🚗 車位折算</h2>
       <div class="info-box mb-3">實價登錄或廣告傳單常包含車位價格與坪數，此功能可計算出「扣除車位後的真實房屋單價」。</div>
       <div class="row g-2 mb-2">
@@ -820,25 +747,7 @@
 
 </div><!-- end tool-section -->
 
-<!-- Footer -->
-<footer>
-  <div>資料來源：內政部實價登錄</div>
-  <div class="mt-2" style="color:rgba(255,255,255,.5);font-size:.65rem;line-height:1.85;max-width:520px;margin:.4rem auto 0;">
-    本系統數據全面串接並轉載自內政部實價登錄之公開資訊，僅進行統計學上之區間推估。<br>
-    本站各項試算結果<strong style="color:rgba(255,255,255,.75);">並非《不動產估價師法》所稱之估價報告書</strong>，<br>
-    不得作為融資、訴訟、稅務申報之依據。實際成交以官方登錄為準。
-  </div>
-  <div class="mt-2 d-flex align-items-center justify-content-center gap-3" style="flex-wrap:wrap;">
-    <button onclick="openModal('modal-disclaimer')" style="background:none;border:none;color:rgba(255,255,255,.35);font-size:.62rem;cursor:pointer;padding:0;text-decoration:underline;">免責聲明</button>
-    <span style="color:rgba(255,255,255,.15);">｜</span>
-    <button onclick="openModal('modal-privacy')" style="background:none;border:none;color:rgba(255,255,255,.35);font-size:.62rem;cursor:pointer;padding:0;text-decoration:underline;">隱私政策</button>
-    <span style="color:rgba(255,255,255,.15);">｜</span>
-    <a href="/dashboard" style="color:rgba(255,255,255,.2);font-size:.62rem;text-decoration:none;">管理後台</a>
-  </div>
-  <div class="mt-2" style="color:rgba(255,255,255,.18);font-size:.6rem;">
-    © <span id="footer-year"></span> 楊肇寧 · 老楊房快說 · 版權所有
-  </div>
-</footer>
+{% include "partials/footer.html" %}
 
 <!-- ── 免責聲明 Modal ── -->
 <div class="text-modal-bd" id="modal-disclaimer" onclick="if(event.target===this)closeModal('modal-disclaimer')">
@@ -870,7 +779,7 @@
     <div class="text-modal-title">隱私政策</div>
     <div class="text-modal-body">
       <h4>一、個人資料收集</h4>
-      本網站為靜態工具頁面，<strong>不主動蒐集任何訪客個人識別資訊</strong>（姓名、電子郵件、身分證字號等）。所有房價試算均在您的裝置本地運算，不傳送至伺服器。
+      試算在你的裝置上運算，不會把試算數字存進伺服器。若你用聯絡表單留言，或訂閱社區行情通知，姓名、電話、Email 與訊息會存在網站資料庫，供回覆或寄通知。完整說明見 <a href="/privacy">隱私政策</a>。
 
       <h4>二、Cookie 與本地儲存</h4>
       本站使用 sessionStorage 暫時儲存生活機能 POI 查詢結果以提升載入速度，該資料僅存於您的瀏覽器，於分頁關閉後自動清除。本站不設置追蹤 Cookie。
@@ -897,6 +806,13 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+const SITE = {
+  url: {{ site_url|tojson }},
+  phone: {{ site.phone_display|tojson }},
+  line: {{ site.line_url|tojson }}
+};
+</script>
 <script>
 // ── 生活機能 POI ───────────────────────────────────────────────
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
@@ -1114,7 +1030,8 @@ function lifeSearchByGPS(){
 </script>
 <script>
 // ── 版權年份自動更新 ──
-document.getElementById('footer-year').textContent = new Date().getFullYear();
+const fy = document.getElementById('footer-year');
+if (fy) fy.textContent = new Date().getFullYear();
 
 // ── 免責/隱私 Modal ──
 function openModal(id)  { document.getElementById(id).classList.add('show');    document.body.style.overflow='hidden'; }
@@ -1650,7 +1567,7 @@ function printEstimate() {
       <img src="/static/images/avatar.png" style="width:56px;height:56px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
       <div>
         <div style="font-size:1.1rem;font-weight:700;color:#1a7a56;">楊肇寧｜老楊房快說</div>
-        <div style="font-size:.82rem;color:#555;">永慶不動產 ｜ 0935-195-944</div>
+        <div style="font-size:.82rem;color:#555;">永慶不動產 ｜ ${SITE.phone}</div>
       </div>
       <div style="margin-left:auto;font-size:.75rem;color:#888;">列印日期：${new Date().toLocaleDateString('zh-TW')}</div>
     </div>
@@ -1685,7 +1602,7 @@ function printEstimate() {
     </table>
     <div style="margin-top:1rem;font-size:.68rem;color:#999;border-top:1px solid #eee;padding-top:.6rem;">
       ⚠ 本估算報告依近2年內政部實價登錄資料統計，僅供市場行情參考，並非《不動產估價師法》所稱之估價報告書，不得作為融資、訴訟、稅務申報之依據。<br>
-      資料來源：leju-scraper.onrender.com ｜ 楊肇寧｜老楊房快說
+      資料來源：${SITE.url} ｜ 楊肇寧｜老楊房快說
     </div>
   `;
   document.body.appendChild(el);
@@ -2009,7 +1926,7 @@ async function doEstimate() {
       }
       shareMsg += `，最新成交 ${d.latest_date || '—'}`;
       // 直達連結：帶入社區、坪數、車位，點開直接還原試算結果
-      let directUrl = `https://leju-scraper.onrender.com/?q=${encodeURIComponent(name)}`;
+      let directUrl = `${SITE.url}/tools?q=${encodeURIComponent(name)}`;
       if (sid)   directUrl += `&sid=${sid}`;
       if (area > 0) directUrl += `&area=${area}`;
       if (_estParking > 0) directUrl += `&pk=${_estParking}&pkt=${_estAreaType}`;
@@ -2262,12 +2179,28 @@ document.addEventListener('click', e => {
     if (s) s.style.display = 'none';
   }
 });
+
+function openToolFromHash() {
+  if (new URLSearchParams(location.search).get('q')) return;
+  const raw = (location.hash || '').replace('#', '');
+  if (!raw) return;
+  const alias = { ping:'calc', parking:'calc', quickfill:'calc', 'tool-ping':'calc', 'tool-parking':'calc', 'tool-quickfill':'calc' };
+  let name = raw.indexOf('panel-') === 0 ? raw.slice(6) : raw;
+  name = alias[name] || alias[raw] || name;
+  const btn = document.querySelector(".tab-btn[onclick*=\"'" + name + "'\"]");
+  if (btn && document.getElementById('panel-' + name)) {
+    switchTab(name, btn);
+    const target = document.getElementById(raw) || document.getElementById('tool-' + raw) || document.getElementById('panel-' + name);
+    if (target) target.scrollIntoView({block:'start'});
+  }
+}
+openToolFromHash();
 </script>
 
 <!-- ② 懸浮 CTA 按鈕 -->
 <div class="float-cta">
-  <a href="tel:0935195944" class="float-btn float-btn-call" title="撥打電話">📞</a>
-  <a href="https://line.me/ti/p/qkAJ5hcj7m" target="_blank" class="float-btn float-btn-line" title="加 LINE 好友">💬</a>
+  <a href="tel:{{ site.phone_tel }}" class="float-btn float-btn-call" title="撥打電話">📞</a>
+  <a href="{{ site.line_url }}" target="_blank" rel="noopener" class="float-btn float-btn-line" title="加 LINE 好友">💬</a>
 </div>
 
 </body>

@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">{{ site.brand }} · {{ site.store_name }}</p>
+      <h1>{{ site.hero_title }}</h1>
+      <p class="lede">{{ site.hero_subtitle }}</p>
+      <p class="tag-row">{{ site.hero_tags }}</p>
+      <p class="help-line">{{ site.hero_help }}</p>
+      <div class="cta-row">
+        <a class="site-btn site-btn-line" href="{{ site.line_url }}" target="_blank" rel="noopener">加 LINE 聊聊</a>
+        <a class="site-btn site-btn-red" href="tel:{{ site.phone_tel }}">{{ site.phone_display }}</a>
+        <a class="site-btn site-btn-ghost" href="/contact">留下聯絡方式</a>
+      </div>
+      <p class="meta">LINE ID：{{ site.line_id }}</p>
+    </div>
+    <figure class="hero-photo">
+      <img src="{{ url_for('static', filename='images/avatar.png') }}" width="560" height="560" alt="{{ site.name }}，老楊房快說營業員">
+      <figcaption>{{ site.name }} · 營業員<br>{{ site.agent_license }}</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="section" id="about">
+  <div class="wrap about-grid">
+    <div>
+      <div class="section-head">
+        <h2>關於我</h2>
+        <hr class="rule">
+        <p>{{ site.about_lead }}</p>
+      </div>
+      <p>{{ site.about_name_line }}。我是不動產營業員，在{{ site.store_name }}。</p>
+      <p>{{ site.specialty }}。</p>
+      <p><a href="/about">看完整介紹</a></p>
+    </div>
+    <dl class="card facts">
+      <div><dt>職稱</dt><dd>營業員</dd></div>
+      <div><dt>營業員證號</dt><dd>{{ site.agent_license }}</dd></div>
+      <div><dt>服務區域</dt><dd>{{ site.service_areas }}</dd></div>
+      <div><dt>熟悉的生活圈</dt><dd>{{ site.familiar_areas }}</dd></div>
+      {% if site.years_public %}
+      <div><dt>年資</dt><dd>{{ site.years_public }}</dd></div>
+      {% endif %}
+      <div><dt>門市</dt><dd>{{ site.store_name }}<br>{{ site.store_address }}</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section class="section alt" id="why">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>為什麼找老楊</h2>
+      <hr class="rule">
+    </div>
+    <div class="why-grid">
+      {% for item in why %}
+      <article class="why-card">
+        <div class="n">{{ item.n }}</div>
+        <h3>{{ item.title }}</h3>
+        <p>{{ item.detail }}</p>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section" id="team">
+  <div class="wrap team-grid">
+    <div>
+      <div class="section-head">
+        <h2>團隊／門市</h2>
+        <hr class="rule">
+        <p>一個人跑得快，一群人走得遠。買賣牽涉估價、帶看、斡旋、貸款與點交，背後有門市一起接，案子才不容易斷點。</p>
+      </div>
+      <p>{{ site.team_note }}</p>
+      {% if site.team_label %}<p>{{ site.team_label }}</p>{% endif %}
+    </div>
+    <dl class="card facts">
+      <div><dt>門市</dt><dd>{{ site.store_name }}</dd></div>
+      <div><dt>經紀業</dt><dd>{{ site.company_name }}</dd></div>
+      <div><dt>地址</dt><dd><a href="https://maps.google.com/?q={{ site.store_address | urlencode }}" target="_blank" rel="noopener">{{ site.store_address }}</a></dd></div>
+      <div><dt>門市電話</dt><dd><a href="tel:{{ site.store_phone_tel }}">{{ site.store_phone }}</a></dd></div>
+      <div><dt>傳真</dt><dd>{{ site.store_fax }}</dd></div>
+      <div><dt>專任經紀人</dt><dd>{{ site.broker_name }} {{ site.broker_license }}</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section class="section alt" id="services">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>你現在在哪個階段？</h2>
+      <hr class="rule">
+      <p>點一下看我會怎麼幫你。完整說明在各服務頁。</p>
+    </div>
+    <div class="stage-tabs" role="tablist">
+      {% for key in service_order %}
+      <button type="button" role="tab" data-stage="{{ key }}" class="{% if loop.first %}is-on{% endif %}" aria-selected="{{ 'true' if loop.first else 'false' }}">{{ services[key].nav }}</button>
+      {% endfor %}
+    </div>
+    {% for key in service_order %}
+    {% set s = services[key] %}
+    <div class="stage card {% if loop.first %}is-on{% endif %}" id="stage-{{ key }}">
+      <p class="cat">{{ s.kicker }}</p>
+      <p>{{ s.lead }}</p>
+      <h3>適合你如果</h3>
+      <ul class="fit">
+        {% for line in s.fit %}<li>{{ line }}</li>{% endfor %}
+      </ul>
+      <h3>我會怎麼做</h3>
+      <ol class="steps">
+        {% for title, detail in s.steps %}
+        <li><strong>{{ title }}</strong>{{ detail }}</li>
+        {% endfor %}
+      </ol>
+      {% if s.note %}<p>{{ s.note }}</p>{% endif %}
+      <p><a href="/services/{{ key }}">看{{ s.nav }}完整說明</a></p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section" id="tools">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>先自己算一遍</h2>
+      <hr class="rule">
+      <p>預設數字只是起點，換成你的數字。算完可以截圖，或直接 LINE 給我一起看。十個試算都在試算工具頁，行情、估價與驗屋頁也還在。</p>
+    </div>
+    <div class="tool-grid">
+      {% for tool in tools %}
+      <a class="tool-card" href="{{ tool.href }}">
+        <h3>{{ tool.title }}</h3>
+        <p>{{ tool.text }}</p>
+      </a>
+      {% endfor %}
+    </div>
+    <p style="margin-top:1rem;"><a class="site-btn site-btn-red" href="/tools">打開全部試算</a></p>
+  </div>
+</section>
+
+<section class="section alt" id="market">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>桃園・鶯歌行情</h2>
+      <hr class="rule">
+      <p>從行政區進生活圈，再看到社區實價。重劃區有單獨總覽。</p>
+      {% if global_stats and global_stats.total_tx %}
+      <p class="meta">目前收錄 {{ "{:,}".format(global_stats.total_tx) }} 筆實價{% if global_stats.latest_month %}，最新成交月份 {{ global_stats.latest_month }}{% endif %}{% if last_scrape %}，資料更新 {{ last_scrape.scraped_at[:10] }}{% endif %}。</p>
+      {% endif %}
+    </div>
+    <div class="chips">
+      {% for d in districts %}
+      <a class="chip" href="/price/{{ d.name }}">{{ d.name }}房價</a>
+      {% endfor %}
+    </div>
+    <p style="margin-top:1rem;">
+      <a href="/price">各行政區實價登錄</a> ·
+      <a href="/redevelopment">重劃區行情總覽</a> ·
+      <a href="/tools#estimate">社區行情落點</a>
+    </p>
+  </div>
+</section>
+
+<section class="section" id="listings">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>在售物件</h2>
+      <hr class="rule">
+      <p>我正在賣的房子放這裡。看到喜歡的，LINE 跟我約帶看。</p>
+    </div>
+    {% if listings %}
+    <div class="card-grid">
+      {% for item in listings %}
+      <a class="listing-card" href="/listings/{{ item.id }}">
+        {% if item.cover_id %}
+        <img src="/media/{{ item.cover_id }}" alt="">
+        {% endif %}
+        <div>
+          <h3>{{ item.title }}</h3>
+          <p class="meta">{{ item.district }} {% if item.layout %}· {{ item.layout }}{% endif %} {% if item.ping %}· {{ item.ping }}{% endif %}</p>
+          {% if item.price_label %}<p class="price">{{ item.price_label }}</p>{% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">目前沒有上架中的物件。想看哪個區域或社區，直接跟我說。</div>
+    {% endif %}
+    <p><a href="/listings">物件列表</a></p>
+  </div>
+</section>
+
+<section class="section alt" id="stories">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>成交見證</h2>
+      <hr class="rule">
+      <p>只放已取得本人同意的回饋。</p>
+    </div>
+    {% if testimonials %}
+    <div class="card-grid">
+      {% for item in testimonials %}
+      <article class="story-card">
+        <blockquote>{{ item.quote }}</blockquote>
+        <footer>{{ item.client_label }}{% if item.area %} · {{ item.area }}{% endif %}</footer>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">目前還沒有可以公開的客戶見證。</div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="section" id="faq">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>常見問題</h2>
+      <hr class="rule">
+    </div>
+    <div class="faq-list">
+      {% for item in faqs %}
+      <details>
+        <summary><span class="cat">{{ item.category }}</span> {{ item.question }}</summary>
+        <p>{{ item.answer }}</p>
+      </details>
+      {% endfor %}
+    </div>
+    <p><a href="/faq">看全部 FAQ</a> · <a href="/articles">避坑攻略</a> · <a href="/inspection">看屋注意事項</a></p>
+  </div>
+</section>
+
+<section class="section alt" id="contact">
+  <div class="wrap contact-grid">
+    <div>
+      <div class="section-head">
+        <h2>{{ site.contact_title }}</h2>
+        <hr class="rule">
+        <p>{{ site.contact_body }}</p>
+      </div>
+      <p><a class="site-btn site-btn-line" href="{{ site.line_url }}" target="_blank" rel="noopener">加 LINE（ID：{{ site.line_id }}）</a></p>
+      <p><a href="tel:{{ site.phone_tel }}">個人 {{ site.phone_display }}</a><br>
+         門市 <a href="tel:{{ site.store_phone_tel }}">{{ site.store_phone }}</a></p>
+      <img src="{{ url_for('static', filename='images/line_qr.png') }}" width="160" height="160" alt="LINE QR Code，ID {{ site.line_id }}">
+    </div>
+    <div class="card">
+      {% set next_url = "/#contact" %}
+      {% set form = none %}
+      {% set error = none %}
+      {% include "partials/inquiry_form.html" %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var h = (location.hash || "").replace("#", "");
+  var ok = {price:1,estimate:1,mortgage:1,afford:1,land:1,landval:1,fees:1,calc:1,life:1,yield:1,ping:1,parking:1,quickfill:1};
+  if (ok[h] || h.indexOf("panel-") === 0) location.replace("/tools#" + h);
+})();
+</script>
+{% endblock %}

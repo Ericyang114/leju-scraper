@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-hero">
+  <div class="wrap">
+    <p class="crumbs"><a href="/">首頁</a> ／ 關於我</p>
+    <h1>關於我</h1>
+  </div>
+</section>
+<section class="section" style="padding-top:0;">
+  <div class="wrap about-grid">
+    <div class="prose">
+      <p>{{ site.about_lead }}</p>
+      <p>{{ site.about_name_line }}。職稱是不動產營業員，在{{ site.store_name }}。</p>
+      <p>{{ site.specialty }}。</p>
+      <p>服務區域：{{ site.service_areas }}。</p>
+      <p>常跑的生活圈與重劃：{{ site.familiar_areas }}。</p>
+      {% if site.years_public %}<p>年資：{{ site.years_public }}</p>{% endif %}
+      <h2>為什麼找老楊</h2>
+      {% for item in why %}
+      <h3>{{ item.title }}</h3>
+      <p>{{ item.detail }}</p>
+      {% endfor %}
+    </div>
+    <div>
+      <figure class="hero-photo">
+        <img src="{{ url_for('static', filename='images/avatar.png') }}" alt="{{ site.name }}">
+      </figure>
+      <dl class="card facts" style="margin-top:1rem;">
+        <div><dt>姓名</dt><dd>{{ site.name }}</dd></div>
+        <div><dt>職稱</dt><dd>營業員</dd></div>
+        <div><dt>營業員證號</dt><dd>{{ site.agent_license }}</dd></div>
+        <div><dt>門市</dt><dd>{{ site.store_name }}</dd></div>
+        <div><dt>經紀業</dt><dd>{{ site.company_name }}</dd></div>
+        <div><dt>特許字號</dt><dd>{{ site.license_no }}</dd></div>
+        <div><dt>專任經紀人</dt><dd>{{ site.broker_name }} {{ site.broker_license }}</dd></div>
+        <div><dt>電話</dt><dd><a href="tel:{{ site.phone_tel }}">{{ site.phone_display }}</a></dd></div>
+        <div><dt>LINE</dt><dd>{{ site.line_id }}</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
+{% endblock %}

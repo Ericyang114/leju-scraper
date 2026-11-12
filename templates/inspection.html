@@ -3,8 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>看屋注意事項完整清單 · 老楊房快說</title>
-  <meta name="description" content="看屋前必做功課、現場20題必問清單、屋況修繕費用參考表，幫助你避開地雷屋，做出最正確的買房決策。">
+  {% set seo_title = "看屋注意事項・買房避坑｜老楊房快說" %}
+  {% set seo_description = "看屋前要做的功課、現場必問題目、兩次看屋怎麼排，以及屋況修繕費用參考。重大結構問題仍建議另請專業驗屋。老楊房快說楊肇寧。" %}
+  {% set seo_path = "/inspection" %}
+  {% set crumbs = [("首頁", "/"), ("看屋注意事項", "")] %}
+  {% include "partials/meta.html" %}
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
@@ -202,7 +205,47 @@
       .section-card { box-shadow: none !important; border: 1px solid #ddd; break-inside: avoid; }
       body { background: #fff !important; }
       .container { max-width: 100% !important; }
+      .inspect-wm-clip {
+        display: block !important;
+        position: fixed !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .inspect-wm { color: rgba(15, 39, 68, 0.12); }
     }
+
+    /* 只在看屋頁：斜向重複浮水印，不擋點擊與選字 */
+    .inspect-wm-clip {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 20;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .inspect-wm {
+      position: absolute;
+      top: -60%;
+      left: -60%;
+      width: 220%;
+      height: 220%;
+      display: flex;
+      flex-wrap: wrap;
+      align-content: space-around;
+      justify-content: space-around;
+      gap: 1.6rem 2.4rem;
+      transform: rotate(-30deg);
+      transform-origin: center;
+      font-family: "Noto Sans TC", "PingFang TC", sans-serif;
+      font-weight: 700;
+      font-size: clamp(0.85rem, 2.5vw, 1.15rem);
+      letter-spacing: .04em;
+      line-height: 1;
+      color: rgba(15, 39, 68, 0.075);
+      user-select: none;
+    }
+    .inspect-wm span { white-space: nowrap; }
 
     .disclaimer {
       font-size: .68rem;
@@ -216,6 +259,15 @@
   </style>
 </head>
 <body>
+{% set wm_name = site.name|trim if site and site.name else '楊肇寧' %}
+{% set wm_phone = site.phone_display|trim if site and site.phone_display else '0935-195-944' %}
+{% set wm_text = '永慶不動產 ' ~ wm_name ~ ' ' ~ wm_phone %}
+<div class="inspect-wm-clip" aria-hidden="true">
+  <div class="inspect-wm">
+    {% for _ in range(72) %}<span>{{ wm_text }}</span>{% endfor %}
+  </div>
+</div>
+{% include "partials/nav.html" %}
 
 <!-- Hero -->
 <div class="hero">
@@ -542,9 +594,9 @@
   <!-- CTA -->
   <div class="cta-box">
     <h3>🏠 想找人陪你看屋、幫你把關屋況？</h3>
-    <p>老楊深耕桃園房市多年，從看屋、議價到交屋，全程協助你避開地雷</p>
-    <a class="btn-line" href="https://line.me/ti/p/~@yanghousetalk" target="_blank">💬 加 LINE 免費諮詢</a>
-    <a class="btn-tel" href="tel:0935195944">📞 0935-195-944</a>
+    <p>從看屋、議價到交屋，我可以陪你把屋況與價格對一下。重大結構問題仍建議另請專業驗屋。</p>
+    <a class="btn-line" href="{{ site.line_url }}" target="_blank" rel="noopener">💬 加 LINE 聊聊</a>
+    <a class="btn-tel" href="tel:{{ site.phone_tel }}">📞 {{ site.phone_display }}</a>
   </div>
 
   <div class="disclaimer mt-3">
@@ -554,5 +606,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% include "partials/footer.html" %}
 </body>
 </html>

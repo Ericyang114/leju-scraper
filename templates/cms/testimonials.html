@@ -1,0 +1,27 @@
+{% extends "cms/base.html" %}
+{% block title %}見證{% endblock %}
+{% block content %}
+<h1>成交見證</h1>
+<p><a class="site-btn site-btn-red" href="/admin/testimonials/new">新增見證</a></p>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>稱呼</th><th>狀態</th><th></th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.client_label }}{% if row.area %} · {{ row.area }}{% endif %}
+          {% if row.is_demo %}<span class="badge warn">示範</span>{% endif %}
+        </td>
+        <td>
+          {% if row.published %}<span class="badge on">上架</span>{% else %}<span class="badge">未上架</span>{% endif %}
+          {% if row.consent %}<span class="badge">已同意</span>{% else %}<span class="badge warn">未勾同意</span>{% endif %}
+        </td>
+        <td><a href="/admin/testimonials/{{ row.id }}">編輯</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3">還沒有見證。</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
