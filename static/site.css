@@ -55,16 +55,13 @@
   min-width: 0;
 }
 .nav-mark {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  background: var(--gold-2);
-  color: var(--navy-deep);
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  letter-spacing: .04em;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #fff;
+  object-fit: cover;
   flex: none;
+  border: 2px solid var(--gold-2);
 }
 .nav-brand strong { display: block; color: #fff; font-size: 1.05rem; line-height: 1.2; }
 .nav-brand small { display: block; color: #e8eef8; font-size: .72rem; }
@@ -218,7 +215,7 @@ body:not(.site-body) { font-family: "Noto Sans TC", "PingFang TC", sans-serif; }
 .hero-photo { margin: 0; }
 .hero-photo img {
   width: min(100%, 260px);
-  background: #161616;
+  background: transparent;
   border-radius: 18px;
   border: 3px solid var(--gold);
   display: block;
