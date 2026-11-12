@@ -57,6 +57,12 @@ class SiteTests(unittest.TestCase):
         for path in pages:
             res = self.client.get(path)
             self.assertEqual(res.status_code, 200, path)
+        inspection = self.client.get("/inspection").get_data(as_text=True)
+        self.assertIn("inspect-wm", inspection)
+        self.assertIn("永慶不動產 楊肇寧 0935-195-944", inspection)
+        self.assertIn("pointer-events: none", inspection)
+        home = self.client.get("/").get_data(as_text=True)
+        self.assertNotIn("inspect-wm", home)
         self.assertEqual(self.client.get("/price/沒有這區").status_code, 404)
         self.assertEqual(self.client.get("/services/nope").status_code, 404)
         robots = self.client.get("/robots.txt").get_data(as_text=True)

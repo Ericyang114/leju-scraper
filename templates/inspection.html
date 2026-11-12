@@ -205,7 +205,47 @@
       .section-card { box-shadow: none !important; border: 1px solid #ddd; break-inside: avoid; }
       body { background: #fff !important; }
       .container { max-width: 100% !important; }
+      .inspect-wm-clip {
+        display: block !important;
+        position: fixed !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .inspect-wm { color: rgba(201, 45, 63, 0.16); }
     }
+
+    /* 只在看屋頁：斜向重複浮水印，不擋點擊與選字 */
+    .inspect-wm-clip {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 20;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .inspect-wm {
+      position: absolute;
+      top: -60%;
+      left: -60%;
+      width: 220%;
+      height: 220%;
+      display: flex;
+      flex-wrap: wrap;
+      align-content: space-around;
+      justify-content: space-around;
+      gap: 1.6rem 2.4rem;
+      transform: rotate(-30deg);
+      transform-origin: center;
+      font-family: "Noto Sans TC", "PingFang TC", sans-serif;
+      font-weight: 700;
+      font-size: clamp(0.85rem, 2.5vw, 1.15rem);
+      letter-spacing: .04em;
+      line-height: 1;
+      color: rgba(201, 45, 63, 0.11);
+      user-select: none;
+    }
+    .inspect-wm span { white-space: nowrap; }
 
     .disclaimer {
       font-size: .68rem;
@@ -219,6 +259,14 @@
   </style>
 </head>
 <body>
+{% set wm_name = site.name|trim if site and site.name else '楊肇寧' %}
+{% set wm_phone = site.phone_display|trim if site and site.phone_display else '0935-195-944' %}
+{% set wm_text = '永慶不動產 ' ~ wm_name ~ ' ' ~ wm_phone %}
+<div class="inspect-wm-clip" aria-hidden="true">
+  <div class="inspect-wm">
+    {% for _ in range(72) %}<span>{{ wm_text }}</span>{% endfor %}
+  </div>
+</div>
 {% include "partials/nav.html" %}
 
 <!-- Hero -->
