@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-hero">
+  <div class="wrap">
+    <p class="crumbs"><a href="/">首頁</a> ／ 服務</p>
+    <h1>買房、售屋、換屋、置產</h1>
+    <p>先看你在哪個階段。數字能先算的，我會請你先用站上的工具算一版。</p>
+  </div>
+</section>
+<section class="section" style="padding-top:0;">
+  <div class="wrap service-grid">
+    {% for key in service_order %}
+    {% set s = services[key] %}
+    <a class="service-card" href="/services/{{ key }}">
+      <p class="cat">{{ s.kicker }}</p>
+      <h2>{{ s.nav }}</h2>
+      <p>{{ s.lead }}</p>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

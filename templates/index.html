@@ -71,7 +71,8 @@
 <!-- Hero -->
 <div class="hero">
   <div class="container">
-    <h1>🏠 管理後台 · 實價登錄生活圈總覽</h1>
+    <h1>實價登錄生活圈總覽</h1>
+    <p class="meta"><a href="/admin" style="color:#fff;">內容管理</a> · <a href="/" style="color:#fff;">看前台</a></p>
     <p class="meta mb-0">
       {% if last_scrape %}
         最後更新：{{ last_scrape.scraped_at[:19].replace('T',' ') }}　共 {{ last_scrape.records_count }} 筆交易記錄

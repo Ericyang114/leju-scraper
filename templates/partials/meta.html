@@ -1,0 +1,26 @@
+<title>{{ seo_title }}</title>
+<meta name="description" content="{{ seo_description }}">
+<meta name="robots" content="{{ seo_robots if seo_robots is defined else 'index, follow' }}">
+<link rel="canonical" href="{{ site_url }}{{ seo_path }}">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:site_name" content="老楊房快說">
+<meta property="og:title" content="{{ seo_title }}">
+<meta property="og:description" content="{{ seo_description }}">
+<meta property="og:url" content="{{ site_url }}{{ seo_path }}">
+<meta property="og:image" content="{{ seo_image if seo_image is defined and seo_image else site_url ~ '/static/images/avatar.png' }}">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#1a2e5a">
+{% if crumbs is defined and crumbs %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {% for name, href in crumbs %}
+    {"@type":"ListItem","position":{{ loop.index }},"name":{{ name|tojson }},"item":{{ (site_url ~ (href or seo_path))|tojson }}}{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+{% endif %}

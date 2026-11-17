@@ -1,0 +1,44 @@
+<footer class="site-footer">
+  <div class="wrap foot-grid">
+    <div>
+      <div class="foot-brand">{{ site.brand }} <span class="foot-gold">{{ site.name }}</span></div>
+      <p>{{ site.store_name }} · 營業員</p>
+      <div class="foot-links">
+        {% for label, href in social_links %}
+        <a href="{{ href }}" target="_blank" rel="noopener">{{ label }}</a>
+        {% endfor %}
+        <a href="tel:{{ site.phone_tel }}">{{ site.phone_display }}</a>
+      </div>
+      <div class="foot-legal">
+        {{ site.store_name }}<br>
+        經紀業：{{ site.company_name }}｜統一編號：{{ site.tax_id }}<br>
+        經紀業特許字號：{{ site.license_no }}<br>
+        地址：{{ site.store_address }}<br>
+        電話：{{ site.store_phone }}｜傳真：{{ site.store_fax }}<br>
+        專任經紀人：{{ site.broker_name }} {{ site.broker_license }}<br>
+        營業員：{{ site.name }} {{ site.agent_license }}<br>
+        永慶客服專線：{{ site.hq_service_phone }}
+      </div>
+      <p class="foot-note">{{ site.franchise_notice }}</p>
+    </div>
+    <div>
+      <div class="foot-links">
+        <a href="/about">關於</a>
+        <a href="/services">服務</a>
+        <a href="/tools">試算工具</a>
+        <a href="/price">桃園實價登錄</a>
+        <a href="/redevelopment">重劃區行情</a>
+        <a href="/inspection">看屋注意事項</a>
+        <a href="/articles">避坑攻略</a>
+        <a href="/listings">在售物件</a>
+        <a href="/faq">FAQ</a>
+        <a href="/contact">聯絡</a>
+        <a href="/disclaimer">免責聲明</a>
+        <a href="/privacy">隱私政策</a>
+        <a href="/admin">內容管理</a>
+      </div>
+      <p class="foot-note">© {{ year }} {{ site.name }} · {{ site.brand }}</p>
+      <p class="foot-note">實價資料來源為內政部實價登錄。試算結果不是《不動產估價師法》所稱之估價報告書。</p>
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,38 @@
+{% if request.args.get('sent') %}
+<p class="banner-ok">已收到你的訊息。我會用電話或 LINE 再跟你聯絡。</p>
+{% endif %}
+{% if error %}
+<p class="form-error">{{ error }}</p>
+{% endif %}
+<form class="inquiry-form" method="post" action="/contact">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="next" value="{{ next_url }}">
+  <input type="hidden" name="source_path" value="{{ request.path }}">
+  <div class="hp" aria-hidden="true">
+    <label>網站<input name="website" tabindex="-1" autocomplete="off"></label>
+  </div>
+  <label>怎麼稱呼
+    <input name="name" required maxlength="40" autocomplete="name" value="{{ form.get('name','') if form else '' }}">
+  </label>
+  <label>電話
+    <input name="phone" required inputmode="tel" autocomplete="tel" placeholder="09xx-xxx-xxx" value="{{ form.get('phone','') if form else '' }}">
+  </label>
+  <label>LINE（選填）
+    <input name="contact_line" maxlength="40" value="{{ form.get('contact_line','') if form else '' }}">
+  </label>
+  <label>Email（選填）
+    <input name="email" type="email" maxlength="120" value="{{ form.get('email','') if form else '' }}">
+  </label>
+  <label>你現在想談
+    {% set intent = form.get('intent','') if form else '' %}
+    <select name="intent">
+      {% for opt in ['買房規劃','屋主售屋','換屋銜接','置產評估','其他'] %}
+      <option {% if intent == opt %}selected{% endif %}>{{ opt }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>想說的話
+    <textarea name="message" required maxlength="2000" placeholder="區域、預算，或社區／地址">{{ form.get('message','') if form else '' }}</textarea>
+  </label>
+  <button class="site-btn site-btn-red" type="submit">送出諮詢</button>
+</form>

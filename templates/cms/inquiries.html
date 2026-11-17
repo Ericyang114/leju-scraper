@@ -1,0 +1,37 @@
+{% extends "cms/base.html" %}
+{% block title %}諮詢名單{% endblock %}
+{% block content %}
+<h1>諮詢名單</h1>
+<p><a class="site-btn site-btn-red" href="/admin/inquiries.csv">匯出 CSV</a></p>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>時間</th><th>聯絡</th><th>內容</th><th></th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.created_at }}<br>{% if row.status == 'new' %}<span class="badge on">未讀</span>{% else %}<span class="badge">已讀</span>{% endif %}</td>
+        <td>{{ row.name }}<br>{{ row.phone }}
+          {% if row.contact_line %}<br>LINE {{ row.contact_line }}{% endif %}
+          {% if row.email %}<br>{{ row.email }}{% endif %}
+          <div class="meta">{{ row.intent }} · {{ row.source_path }}</div>
+        </td>
+        <td>{{ row.message }}</td>
+        <td>
+          <form method="post" action="/admin/inquiries/{{ row.id }}/status">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="status" value="{{ 'new' if row.status == 'read' else 'read' }}">
+            <button class="site-btn site-btn-ghost" type="submit">{% if row.status == 'read' %}標為未讀{% else %}標為已讀{% endif %}</button>
+          </form>
+          <form method="post" action="/admin/inquiries/{{ row.id }}/delete" onsubmit="return confirm('刪除這筆名單？');">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <button class="site-btn site-btn-ghost" type="submit">刪除</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4">還沒有人從表單留言。</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

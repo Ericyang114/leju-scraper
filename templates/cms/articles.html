@@ -1,0 +1,21 @@
+{% extends "cms/base.html" %}
+{% block title %}文章{% endblock %}
+{% block content %}
+<h1>文章／避坑攻略</h1>
+<p><a class="site-btn site-btn-red" href="/admin/articles/new">新增文章</a></p>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>標題</th><th>網址</th><th>狀態</th><th></th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.title }} {% if row.is_demo %}<span class="badge warn">示範</span>{% endif %}</td>
+        <td>/articles/{{ row.slug }}</td>
+        <td>{% if row.published and not row.is_demo %}上架{% else %}未上架{% endif %}</td>
+        <td><a href="/admin/articles/{{ row.id }}">編輯</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

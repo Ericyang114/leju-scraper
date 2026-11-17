@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-hero">
+  <div class="wrap">
+    <p class="crumbs"><a href="/">首頁</a> ／ 成交見證</p>
+    <h1>成交見證</h1>
+    <p>上架前需勾選已取得本人同意。沒有同意的內容不會出現在這裡。</p>
+  </div>
+</section>
+<section class="section" style="padding-top:0;">
+  <div class="wrap card-grid">
+    {% for item in testimonials %}
+    <article class="story-card">
+      <blockquote>{{ item.quote }}</blockquote>
+      <footer>{{ item.client_label }}{% if item.area %} · {{ item.area }}{% endif %}</footer>
+    </article>
+    {% else %}
+    <div class="empty">目前還沒有可以公開的客戶見證。</div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

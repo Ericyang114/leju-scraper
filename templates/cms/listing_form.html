@@ -1,0 +1,59 @@
+{% extends "cms/base.html" %}
+{% block title %}編輯物件{% endblock %}
+{% block content %}
+{% set v = listing or {} %}
+<h1>{% if v.id %}編輯物件{% else %}新增物件{% endif %}</h1>
+<form class="stack-form card" method="post" enctype="multipart/form-data">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <label>標題<input name="title" required value="{{ v.title or '' }}"></label>
+  <label>行政區
+    <select name="district">
+      <option value="">未填</option>
+      {% for name in districts %}
+      <option value="{{ name }}" {% if v.district == name %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>地址<input name="address" value="{{ v.address or '' }}"></label>
+  <label>價格（自己填，例如 1,880 萬。沒有就留白）<input name="price_label" value="{{ v.price_label or '' }}"></label>
+  <label>格局<input name="layout" value="{{ v.layout or '' }}"></label>
+  <label>坪數<input name="ping" value="{{ v.ping or '' }}"></label>
+  <label>屋齡<input name="age_text" value="{{ v.age_text or '' }}"></label>
+  <label>樓層<input name="floor_text" value="{{ v.floor_text or '' }}"></label>
+  <label>車位<input name="parking" value="{{ v.parking or '' }}"></label>
+  <label>說明<textarea name="description">{{ v.description or '' }}</textarea></label>
+  <label>外部連結（591 等，可留白）<input name="external_url" value="{{ v.external_url or '' }}" placeholder="https://"></label>
+  <label>排序（數字小的排前面）<input name="sort_order" value="{{ v.sort_order if v.sort_order is not none else 0 }}"></label>
+  <label>狀態
+    <select name="status">
+      {% for value, label in [('draft','草稿（不上架）'),('published','上架'),('archived','下架')] %}
+      <option value="{{ value }}" {% if (v.status or 'draft') == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="check"><input type="checkbox" name="is_demo" {% if v.is_demo|string in ['1','on','true'] %}checked{% endif %}> 這是示範資料（不能上架）</label>
+  <label>照片（可多張，JPG／PNG／WEBP，會縮圖後存進資料庫）
+    <input type="file" name="photos" accept="image/jpeg,image/png,image/webp" multiple>
+  </label>
+  <button class="site-btn site-btn-red" type="submit">儲存</button>
+</form>
+{% if v.photos %}
+<h2>已上傳的照片</h2>
+{% for photo in v.photos %}
+<div class="photo-row">
+  <img class="thumb" src="/media/{{ photo.media_id }}" alt="">
+  <form class="inline-form" method="post" action="/admin/listings/{{ v.id }}/photos/{{ photo.id }}/delete" onsubmit="return confirm('刪除這張照片？');">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <button class="site-btn site-btn-ghost" type="submit">刪除</button>
+  </form>
+</div>
+{% endfor %}
+{% endif %}
+{% if v.id %}
+<p><a href="/listings/{{ v.id }}">預覽前台</a>（未上架時只有登入後台看得到）</p>
+<form method="post" action="/admin/listings/{{ v.id }}/delete" onsubmit="return confirm('刪除整筆物件與照片？');">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <button class="site-btn site-btn-ghost" type="submit">刪除物件</button>
+</form>
+{% endif %}
+{% endblock %}

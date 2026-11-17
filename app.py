@@ -1,7 +1,6 @@
 """
 Flask 後端 + APScheduler 每日自動更新
 """
-import functools
 import logging
 import math
 import os
@@ -14,9 +13,12 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from markupsafe import Markup, escape
 from apscheduler.schedulers.background import BackgroundScheduler
 
+import content
 import db
+from auth import csrf_ok, csrf_token, login_required
 from scraper import scrape
 
 log = logging.getLogger(__name__)
@@ -25,17 +27,7 @@ app = Flask(__name__)
 app.secret_key    = os.environ.get("SECRET_KEY", "leju-admin-secret-2024")
 ADMIN_PASSWORD    = os.environ.get("ADMIN_PASSWORD", "leju2024")
 db.init_db()
-
-
-# ── 管理後台驗證 ──────────────────────────────────────────────────────────────
-
-def login_required(f):
-    @functools.wraps(f)
-    def decorated(*args, **kwargs):
-        if not session.get("admin_logged_in"):
-            return redirect(url_for("admin_login", next=request.path))
-        return f(*args, **kwargs)
-    return decorated
+content.init_content()
 
 # ── 簡易 TTL 快取（避免每次請求都重算重度 SQL）─────────────────────────────
 _cache: dict = {}
@@ -84,16 +76,15 @@ def _needs_today_scrape() -> bool:
         return True
 
 
-# 啟動時：若今天還沒有資料（首次部署或重啟後 DB 空了），自動開始抓取
-if not _scrape_running:
-    if _needs_today_scrape():
+# 正式環境不設 DISABLE_AUTO_SCRAPE，啟動補抓與每日排程跟原本一樣。
+# 本機測試可設 DISABLE_AUTO_SCRAPE=1，避免一匯入 app 就去打樂居。
+if os.environ.get("DISABLE_AUTO_SCRAPE") != "1":
+    if not _scrape_running and _needs_today_scrape():
         log.info("啟動自動抓取（DB 無今日資料）")
         threading.Thread(target=_run_scrape, daemon=True).start()
-
-# 每天凌晨 2:00 自動更新
-scheduler = BackgroundScheduler(timezone="Asia/Taipei")
-scheduler.add_job(_run_scrape, "cron", hour=2, minute=0, id="daily_scrape")
-scheduler.start()
+    scheduler = BackgroundScheduler(timezone="Asia/Taipei")
+    scheduler.add_job(_run_scrape, "cron", hour=2, minute=0, id="daily_scrape")
+    scheduler.start()
 
 # ── 桃園市行政區對照表 ─────────────────────────────────────────────────────────
 
@@ -210,16 +201,48 @@ NTPC_DISTRICT_INFO = {
 }
 
 
+# ── 前台共用 ──────────────────────────────────────────────────────────────────
+
+_URL_RE = re.compile(r"(https?://[^\s<]+|/[A-Za-z0-9_\-/?=&%.#]+)")
+
+
+@app.template_filter("paragraphs")
+def _paragraphs(text):
+    if not text:
+        return Markup("")
+    chunks = []
+    for block in str(text).replace("\r\n", "\n").split("\n\n"):
+        block = block.strip()
+        if not block:
+            continue
+        lines = []
+        for line in block.split("\n"):
+            pieces = []
+            pos = 0
+            for match in _URL_RE.finditer(line):
+                pieces.append(str(escape(line[pos:match.start()])))
+                url = match.group(0)
+                pieces.append(f'<a href="{escape(url)}">{escape(url)}</a>')
+                pos = match.end()
+            pieces.append(str(escape(line[pos:])))
+            lines.append("".join(pieces))
+        chunks.append("<p>" + "<br>".join(lines) + "</p>")
+    return Markup("".join(chunks))
+
+
+@app.context_processor
+def inject_site():
+    profile = content.get_profile()
+    return {
+        "site": profile,
+        "site_url": content.base_url(),
+        "social_links": content.social_links(profile),
+        "csrf_token": csrf_token,
+        "year": datetime.now().year,
+    }
+
+
 # ── 路由 ──────────────────────────────────────────────────────────────────────
-
-@app.route("/")
-def landing():
-    stats        = _cached("subarea_stats",  db.get_subarea_stats)
-    last         = _cached("last_scrape",    db.get_last_scrape)
-    global_stats = _cached("global_stats",   db.get_global_stats)
-    return render_template("landing.html", stats=stats, last_scrape=last,
-                           global_stats=global_stats)
-
 
 @app.route("/price")
 def price_districts():
@@ -269,18 +292,23 @@ def price_district(district_name):
 def admin_login():
     error = None
     if request.method == "POST":
-        if request.form.get("password") == ADMIN_PASSWORD:
+        if not csrf_ok():
+            error = "表單已過期，請再試一次"
+        elif request.form.get("password") == ADMIN_PASSWORD:
             session["admin_logged_in"] = True
             next_url = request.args.get("next") or url_for("index")
+            if not next_url.startswith("/") or next_url.startswith("//"):
+                next_url = url_for("index")
             return redirect(next_url)
-        error = "密碼錯誤，請再試一次"
+        else:
+            error = "密碼錯誤，請再試一次"
     return render_template("admin_login.html", error=error)
 
 
 @app.route("/admin/logout")
 def admin_logout():
     session.pop("admin_logged_in", None)
-    return redirect(url_for("landing"))
+    return redirect(url_for("site.home"))
 
 
 @app.route("/dashboard")
@@ -295,7 +323,7 @@ def index():
 def subarea(sid):
     sa = db.get_subarea_by_sid(sid)
     if not sa:
-        return redirect(url_for("landing"))
+        return redirect(url_for("site.home"))
 
     page           = max(1, int(request.args.get("page", 1)))
     per_page       = 50
@@ -352,7 +380,7 @@ def subarea(sid):
 def community(sid):
     sa = db.get_subarea_by_sid(sid)
     if not sa:
-        return redirect(url_for("landing"))
+        return redirect(url_for("site.home"))
 
     name = request.args.get("name", "").strip()
     if not name:
@@ -689,6 +717,30 @@ def redevelopment():
         groups.setdefault(g, []).append(z)
 
     return render_template("redevelopment.html", groups=groups)
+
+
+from admin_routes import admin_bp
+from site_routes import site_bp
+
+app.register_blueprint(site_bp)
+app.register_blueprint(admin_bp)
+
+
+@app.errorhandler(404)
+def page_not_found(err):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "not found"}), 404
+    return render_template(
+        "404.html",
+        seo={
+            "title": "找不到頁面｜老楊房快說",
+            "description": "這個網址沒有對應的頁面。",
+            "path": request.path,
+            "crumbs": [],
+            "robots": "noindex, follow",
+            "image": "",
+        },
+    ), 404
 
 
 if __name__ == "__main__":

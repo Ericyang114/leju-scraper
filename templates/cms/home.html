@@ -1,0 +1,22 @@
+{% extends "cms/base.html" %}
+{% block title %}總覽{% endblock %}
+{% block content %}
+<h1>內容總覽</h1>
+<p>這裡改的是前台文案、物件、見證、文章和諮詢名單。實價資料仍由本機每天推上線，這頁不會動到它。</p>
+<div class="stat-grid">
+  <a href="/admin/listings"><strong>{{ counts.listings_on }}</strong>上架物件 / {{ counts.listings }} 筆</a>
+  <a href="/admin/testimonials"><strong>{{ counts.stories_on }}</strong>公開見證 / {{ counts.stories }} 則</a>
+  <a href="/admin/faqs"><strong>{{ counts.faqs }}</strong>公開 FAQ</a>
+  <a href="/admin/articles"><strong>{{ counts.articles_on }}</strong>上架文章 / {{ counts.articles }} 篇</a>
+  <a href="/admin/inquiries"><strong>{{ counts.inquiries_new }}</strong>未讀名單 / {{ counts.inquiries }} 筆</a>
+</div>
+<div class="note" style="margin-top:1rem;">
+  <strong>照片存在資料庫，不存在網站資料夾。</strong>
+  Render 免費方案的磁碟重新部署會清空，所以物件照片寫進資料庫（本機 SQLite、線上 Neon PostgreSQL），部署後還在。
+  取捨是照片會占用資料庫空間；上傳時會縮成最長邊 1600px 的 JPEG。物件很多時再考慮外部圖床。
+</div>
+<div class="note" style="margin-top:.7rem;">
+  楊肇寧的職稱固定顯示「營業員」。年資、Instagram、YouTube、Threads、TikTok 沒填，前台就不顯示。
+  見證要勾「已取得本人同意」才能上架。標題或內文含「示範」的資料不能上架。
+</div>
+{% endblock %}

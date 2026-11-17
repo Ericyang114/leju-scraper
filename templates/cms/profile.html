@@ -1,0 +1,65 @@
+{% extends "cms/base.html" %}
+{% block title %}個人資料{% endblock %}
+{% block content %}
+<h1>個人資料與聯絡方式</h1>
+<p>職稱固定為營業員，這裡沒有職稱欄位。年資與社群留白時，前台不顯示。</p>
+<form class="stack-form card" method="post">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <h2>首頁</h2>
+  {% for key, label in [
+    ('hero_title','主標'), ('hero_subtitle','副標'), ('hero_tags','服務範圍標籤'),
+    ('hero_help','我能幫你'), ('about_lead','關於我開場'), ('about_name_line','姓名一句'),
+    ('specialty','專長一句'), ('service_areas','服務區域'), ('familiar_areas','熟悉生活圈'),
+    ('years_public','可公開年資（沒填不顯示）')
+  ] %}
+  <label>{{ label }}
+    {% if key in ['hero_subtitle','about_lead','specialty','service_areas','familiar_areas'] %}
+    <textarea name="{{ key }}">{{ profile[key] }}</textarea>
+    {% else %}
+    <input name="{{ key }}" value="{{ profile[key] }}">
+    {% endif %}
+  </label>
+  {% endfor %}
+  <h2>聯絡</h2>
+  {% for key, label in [
+    ('phone_display','個人電話（顯示）'), ('phone_tel','個人電話（撥號，純數字）'),
+    ('line_id','LINE ID'), ('line_url','LINE 加好友連結'),
+    ('contact_title','聯絡區標題'), ('contact_body','聯絡區內文')
+  ] %}
+  <label>{{ label }}
+    {% if key in ['contact_body'] %}
+    <textarea name="{{ key }}">{{ profile[key] }}</textarea>
+    {% else %}
+    <input name="{{ key }}" value="{{ profile[key] }}">
+    {% endif %}
+  </label>
+  {% endfor %}
+  <h2>門市與法定資訊</h2>
+  {% for key, label in [
+    ('store_name','門市名稱'), ('company_name','經紀業'), ('tax_id','統一編號'),
+    ('license_no','經紀業特許字號'), ('store_address','地址'),
+    ('store_phone','門市電話'), ('store_phone_tel','門市電話撥號'), ('store_fax','傳真'),
+    ('hq_service_phone','永慶客服專線'), ('broker_name','專任經紀人姓名'),
+    ('broker_license','專任經紀人證號'), ('agent_license','楊肇寧營業員證號'),
+    ('team_note','門市說明'), ('team_label','團隊名稱或人數（沒填不顯示）'),
+    ('franchise_notice','加盟店獨立經營聲明')
+  ] %}
+  <label>{{ label }}
+    {% if key in ['team_note','franchise_notice'] %}
+    <textarea name="{{ key }}">{{ profile[key] }}</textarea>
+    {% else %}
+    <input name="{{ key }}" value="{{ profile[key] }}">
+    {% endif %}
+  </label>
+  {% endfor %}
+  <h2>社群與平台（沒填不顯示）</h2>
+  {% for key, label in [
+    ('facebook_url','Facebook'), ('instagram_url','Instagram'), ('youtube_url','YouTube'),
+    ('threads_url','Threads'), ('tiktok_url','TikTok'), ('shop_591_url','591'),
+    ('lewu_url','樂屋網'), ('yungching_url','永慶個人頁')
+  ] %}
+  <label>{{ label }}<input name="{{ key }}" value="{{ profile[key] }}" placeholder="https://"></label>
+  {% endfor %}
+  <button class="site-btn site-btn-red" type="submit">儲存</button>
+</form>
+{% endblock %}

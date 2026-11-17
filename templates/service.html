@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-hero">
+  <div class="wrap">
+    <p class="crumbs"><a href="/">首頁</a> ／ <a href="/services">服務</a> ／ {{ service.nav }}</p>
+    <p class="cat">{{ service.kicker }}</p>
+    <h1>{{ service.nav }}</h1>
+    <p class="lede">{{ service.lead }}</p>
+  </div>
+</section>
+<section class="section" style="padding-top:0;">
+  <div class="wrap split">
+    <div>
+      <h2>適合你如果</h2>
+      <ul class="fit">
+        {% for line in service.fit %}<li>{{ line }}</li>{% endfor %}
+      </ul>
+      {% if service.note %}<p>{{ service.note }}</p>{% endif %}
+    </div>
+    <div class="card">
+      <h2>我會怎麼做</h2>
+      <ol class="steps">
+        {% for title, detail in service.steps %}
+        <li><strong>{{ title }}</strong>{{ detail }}</li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+  <div class="wrap" style="margin-top:1.2rem;">
+    <div class="cta-row">
+      {% for href, label in service.links %}
+      <a class="site-btn {% if loop.first %}site-btn-red{% else %}site-btn-ghost{% endif %}" href="{{ href }}">{{ label }}</a>
+      {% endfor %}
+      <a class="site-btn site-btn-line" href="{{ site.line_url }}" target="_blank" rel="noopener">加 LINE</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

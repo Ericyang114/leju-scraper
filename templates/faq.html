@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-hero">
+  <div class="wrap">
+    <p class="crumbs"><a href="/">首頁</a> ／ 常見問題</p>
+    <h1>常見問題</h1>
+  </div>
+</section>
+<section class="section" style="padding-top:0;">
+  <div class="wrap faq-list">
+    {% for item in faqs %}
+    <details {% if loop.first %}open{% endif %}>
+      <summary><span class="cat">{{ item.category }}</span> {{ item.question }}</summary>
+      <p>{{ item.answer }}</p>
+    </details>
+    {% else %}
+    <p>目前沒有公開的問題。</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

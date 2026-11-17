@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-hero">
+  <div class="wrap">
+    <p class="crumbs"><a href="/">首頁</a> ／ <a href="/listings">在售物件</a> ／ {{ listing.title }}</p>
+    <h1>{{ listing.title }}</h1>
+    {% if listing.price_label %}<p class="price">{{ listing.price_label }}</p>{% endif %}
+    <p class="meta">
+      {{ listing.district }}
+      {% if listing.layout %} · {{ listing.layout }}{% endif %}
+      {% if listing.ping %} · {{ listing.ping }}{% endif %}
+      {% if listing.age_text %} · {{ listing.age_text }}{% endif %}
+      {% if listing.floor_text %} · {{ listing.floor_text }}{% endif %}
+      {% if listing.parking %} · {{ listing.parking }}{% endif %}
+    </p>
+    {% if listing.address %}<p>{{ listing.address }}</p>{% endif %}
+  </div>
+</section>
+<section class="section" style="padding-top:0;">
+  <div class="wrap">
+    {% if listing.photos %}
+    <div class="gallery">
+      {% for photo in listing.photos %}
+      <img src="/media/{{ photo.media_id }}" alt="{{ listing.title }} 照片 {{ loop.index }}">
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="prose" style="margin-top:1rem;">{{ listing.description | paragraphs }}</div>
+    <div class="cta-row">
+      <a class="site-btn site-btn-line" href="{{ site.line_url }}" target="_blank" rel="noopener">LINE 問這間</a>
+      <a class="site-btn site-btn-red" href="tel:{{ site.phone_tel }}">打電話</a>
+      {% if listing.external_url %}
+      <a class="site-btn site-btn-ghost" href="{{ listing.external_url }}" target="_blank" rel="noopener">物件連結</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

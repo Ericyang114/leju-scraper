@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+  <section class="page-hero">
+    <div class="wrap">
+      <p class="crumbs"><a href="/">首頁</a> ／ <a href="/articles">避坑攻略</a> ／ {{ article.title }}</p>
+      <p class="cat">{{ article.category }}</p>
+      <h1>{{ article.title }}</h1>
+      {% if article.summary %}<p>{{ article.summary }}</p>{% endif %}
+    </div>
+  </section>
+  <section class="section" style="padding-top:0;">
+    <div class="wrap prose">{{ article.body | paragraphs }}</div>
+  </section>
+</article>
+{% endblock %}

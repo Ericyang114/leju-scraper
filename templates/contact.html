@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-hero">
+  <div class="wrap">
+    <p class="crumbs"><a href="/">首頁</a> ／ 聯絡</p>
+    <h1>{{ site.contact_title }}</h1>
+    <p>{{ site.contact_body }}</p>
+  </div>
+</section>
+<section class="section" style="padding-top:0;">
+  <div class="wrap contact-grid">
+    <div class="card">
+      {% set next_url = "/contact" %}
+      {% include "partials/inquiry_form.html" %}
+    </div>
+    <div>
+      <p><a class="site-btn site-btn-line" href="{{ site.line_url }}" target="_blank" rel="noopener">加 LINE（ID：{{ site.line_id }}）</a></p>
+      <p>個人電話 <a href="tel:{{ site.phone_tel }}">{{ site.phone_display }}</a><br>
+         門市 <a href="tel:{{ site.store_phone_tel }}">{{ site.store_phone }}</a><br>
+         {{ site.store_address }}</p>
+      <img src="{{ url_for('static', filename='images/line_qr.png') }}" width="180" height="180" alt="LINE QR Code">
+      <ul class="fit">
+        {% for label, href in social_links %}
+        <li><a href="{{ href }}" target="_blank" rel="noopener">{{ label }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</section>
+{% endblock %}
