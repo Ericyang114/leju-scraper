@@ -23,12 +23,12 @@ PROFILE_DEFAULTS = {
     "brand": "老楊房快說",
     "hero_title": "先誠實，再成交",
     "hero_subtitle": "桃園買房、賣房，先把行情算清楚｜老楊房快說・永慶不動產 楊肇寧",
-    "hero_tags": "桃園市・鶯歌｜青埔・A7・中壢・八德・龜山・蘆竹",
+    "hero_tags": "桃園市各行政區",
     "hero_help": "我能幫你：買房規劃・屋主售屋・換屋銜接・置產評估",
     "about_lead": "先誠實，再成交。房子是決策，不是衝動。先看數字，再談喜不喜歡。",
     "about_name_line": "楊肇寧，大家叫我老楊",
     "specialty": "用內政部實價登錄與自建試算工具，把行情、稅費、貸款負擔攤開給你自己檢驗",
-    "service_areas": "桃園市（含中壢、八德、蘆竹、龜山、大園、青埔等）、新北市鶯歌區",
+    "service_areas": "桃園市各行政區",
     "familiar_areas": "青埔高鐵、A7、小檜溪、中路、八德擴大、航空城、鳳鳴",
     "years_public": "",
     "phone_display": "0935-195-944",
@@ -344,6 +344,18 @@ def _seed(conn):
         db._exec(conn,
                  f"INSERT INTO site_settings (key, value) VALUES ({PH},{PH}) ON CONFLICT (key) DO NOTHING",
                  (key, value))
+    # 已寫入的舊服務範圍改成「桃園市各行政區」，不覆蓋 Eric 另外改過的文字。
+    for key, old in (
+        ("hero_tags", "桃園市・鶯歌｜青埔・A7・中壢・八德・龜山・蘆竹"),
+        ("service_areas", "桃園市（含中壢、八德、蘆竹、龜山、大園、青埔等）、新北市鶯歌區"),
+    ):
+        db._exec(conn, f"UPDATE site_settings SET value={PH} WHERE key={PH} AND value={PH}",
+                 (PROFILE_DEFAULTS[key], key, old))
+    db._exec(conn, f"UPDATE faqs SET question={PH}, answer={PH} WHERE question={PH}", (
+        "桃園市各行政區怎麼選？",
+        "服務範圍是桃園市各行政區。各區差在通勤、生活機能成熟度與價位帶。站內有各行政區實價與重劃區總覽，先對照上班動線與預算，再縮小到兩、三個生活圈帶看。",
+        "青埔、A7、中壢、八德怎麼選？",
+    ))
     now = _now()
     if not _has_flag(conn, "seed_faq_v1"):
         for i, (cat, q, a) in enumerate(FAQ_SEED, start=1):
@@ -959,7 +971,7 @@ def agent_schema(profile: dict, url: str) -> dict:
                     "streetAddress": profile.get("store_address") or "",
                     "addressCountry": "TW",
                 },
-                "areaServed": ["桃園市", "新北市鶯歌區"],
+                "areaServed": ["桃園市各行政區"],
                 "identifier": {
                     "@type": "PropertyValue",
                     "name": "不動產營業員證號",
